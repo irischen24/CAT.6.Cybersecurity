@@ -1,0 +1,56 @@
+/* CAT.6 design tokens — scoped to .c6-root (no :root / * / body resets). */
+.c6-root {
+  /* Color */
+  --c6-bg-deep: #020203;
+  --c6-bg-base: #050506;
+  --c6-bg-elevated: #0A0A0C;
+  --c6-surface: rgba(255,255,255,0.05);
+  --c6-surface-hover: rgba(255,255,255,0.08);
+  --c6-fg: #EDEDEF;
+  --c6-fg-muted: #8A8F98;
+  --c6-fg-subtle: rgba(255,255,255,0.60);
+  --c6-purple: #7C5CFC;
+  --c6-accent: #5E6AD2;
+  --c6-violet: #A855F7;
+  --c6-accent-bright: #6872D9;
+  --c6-accent-glow: rgba(94,106,210,0.30);
+  --c6-border: rgba(255,255,255,0.06);
+  --c6-border-hover: rgba(255,255,255,0.10);
+  --c6-border-accent: rgba(124,92,252,0.30);
+
+  /* Severity — always paired with text + shape (never color alone) */
+  --c6-sev-low: #6FB7A6;
+  --c6-sev-medium: #D9B45A;
+  --c6-sev-high: #E0864E;
+  --c6-sev-critical: #E5566B;
+
+  /* Provenance hues */
+  --c6-prov-user: #8FB4FF;
+  --c6-prov-file: #7FD1C4;
+  --c6-prov-default: #D9B45A;
+  --c6-prov-calc: #B9A6FF;
+
+  /* Type */
+  --c6-font: "Inter", "Geist Sans", system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --c6-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --c6-fs-xs: 0.75rem;   --c6-fs-sm: 0.875rem; --c6-fs-base: 1rem;
+  --c6-fs-lg: 1.125rem;  --c6-fs-xl: 1.25rem;  --c6-fs-2xl: 1.5rem;
+  --c6-fs-3xl: 1.875rem; --c6-fs-4xl: 2.25rem; --c6-fs-5xl: 3rem;
+  --c6-fs-6xl: 3.75rem;  --c6-fs-7xl: 4.5rem;  --c6-fs-8xl: 6rem;
+
+  /* Radius */
+  --c6-r-lg: 0.5rem; --c6-r-xl: 0.75rem; --c6-r-2xl: 1rem; --c6-r-full: 999px;
+
+  /* Shadows — layered */
+  --c6-shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 1px 1px rgba(0,0,0,0.5), 0 8px 24px -8px rgba(0,0,0,0.6), 0 24px 48px -24px rgba(0,0,0,0.7);
+  --c6-shadow-lift: 0 0 0 1px rgba(124,92,252,0.18) inset, 0 2px 2px rgba(0,0,0,0.5), 0 16px 40px -12px rgba(0,0,0,0.7), 0 0 40px -12px var(--c6-accent-glow);
+  --c6-glow-cta: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 8px 24px -6px rgba(124,92,252,0.55);
+
+  /* Motion */
+  --c6-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --c6-t-quick: 200ms; --c6-t-std: 300ms; --c6-t-enter: 600ms; --c6-t-ambient: 9000ms;
+
+  /* Spacing */
+  --c6-space-1: 0.25rem; --c6-space-2: 0.5rem; --c6-space-3: 0.75rem; --c6-space-4: 1rem;
+  --c6-space-6: 1.5rem; --c6-space-8: 2rem; --c6-space-12: 3rem; --c6-space-16: 4rem; --c6-space-24: 6rem;
+}
