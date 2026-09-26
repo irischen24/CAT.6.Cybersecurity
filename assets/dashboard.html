@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard · CAT.6 Cybersecurity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/foundation.css">
+<link rel="stylesheet" href="../assets/css/app-shell.css">
+<link rel="stylesheet" href="../assets/css/dashboard.css">
+</head>
+<body>
+<div class="c6-root c6-app">
+  <a class="c6-skip" href="#main">跳至主要內容</a>
+  <div class="c6-bg" aria-hidden="true"><div class="c6-bg__blob c6-bg__blob--a"></div><div class="c6-bg__grid"></div><div class="c6-bg__noise"></div></div>
+
+  <aside class="c6-side" id="c6-side" data-open="false" aria-label="側邊導覽"></aside>
+  <div class="c6-scrim" data-open="false"></div>
+
+  <div class="c6-main">
+    <header class="c6-topbar">
+      <button class="c6-iconbtn c6-topbar__menu" type="button" aria-controls="c6-side" aria-expanded="false" aria-label="開啟選單"></button>
+      <h1 class="c6-topbar__title">Dashboard</h1>
+      <span class="c6-topbar__ctx">組織目前的資安風險態勢</span>
+      <div class="c6-topbar__tools">
+        <label class="c6-search"><span class="c6-sr-only">搜尋風險情境</span><span class="c6-search__icon" data-icon="search"></span><input class="c6-input" type="search" placeholder="搜尋情境、資產、控制…"></label>
+        <span class="c6-badge" title="目前資料集為 CAT.6 示範 / 假設值">DEMO<span class="c6-topbar__demo-long">&nbsp;/ ASSUMED</span></span>
+      </div>
+    </header>
+
+    <main id="main" class="c6-workspace">
+      <section class="c6-notice" aria-label="資料來源提示">
+        <p class="c6-notice__text"><strong>No organization-specific data was provided. CAT.6 default assumptions are being used.</strong><br>
+          尚未提供組織資料，以下數值皆為 CAT.6 示範 / 假設值，不代表任何組織的實際評估、稽核或驗證結果。</p>
+        <div class="c6-notice__actions">
+          <button class="c6-btn c6-btn--secondary" type="button" aria-pressed="true">Use CAT.6 Default Values</button>
+          <a class="c6-btn c6-btn--ghost" href="fair-analysis.html">Edit Values</a>
+          <a class="c6-btn c6-btn--primary" href="fair-analysis.html#import">Import Organization Data</a>
+        </div>
+      </section>
+
+      <section aria-labelledby="kpi-h">
+        <h2 id="kpi-h" class="c6-sr-only">關鍵指標</h2>
+        <div class="c6-dash-kpis" id="kpis"></div>
+      </section>
+
+      <div class="c6-grid">
+        <section class="c6-card c6-span-2" aria-labelledby="bar-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="bar-h">風險情境分數（CAT.6 5×5）</h2><p class="c6-panel__sub">Risk Score = Likelihood × Impact · 平台自定義準則，非 ISO 27001 指定公式</p></div><span id="bar-prov"></span></div>
+          <div id="bar"></div>
+          <p class="c6-chart-summary" id="bar-sum"></p>
+        </section>
+        <section class="c6-card" aria-labelledby="trend-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="trend-h">風險趨勢</h2><p class="c6-panel__sub">High + Critical 情境數 / 季</p></div><span id="trend-prov"></span></div>
+          <div id="trend"></div>
+          <p class="c6-chart-summary" id="trend-sum"></p>
+        </section>
+
+        <section class="c6-card" aria-labelledby="mx-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="mx-h">5×5 風險矩陣</h2><p class="c6-panel__sub">形狀 ● Low · ■ Medium · ▲ High · ◆ Critical</p></div></div>
+          <div id="matrix"></div>
+        </section>
+        <section class="c6-card" aria-labelledby="top-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="top-h">Top Risk Scenarios</h2><p class="c6-panel__sub">依分數排序</p></div></div>
+          <ol class="c6-toplist" id="top"></ol>
+        </section>
+        <section class="c6-card" aria-labelledby="cov-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="cov-h">Framework Coverage</h2><p class="c6-panel__sub">有使用該框架評估的情境比例</p></div><span id="cov-prov"></span></div>
+          <ul class="c6-cov" id="cov"></ul>
+        </section>
+
+        <section class="c6-card c6-span-2" aria-labelledby="src-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="src-h">Data Source Status 資料來源狀態</h2><p class="c6-panel__sub">本頁所有數值的來源分布（筆數）</p></div></div>
+          <div class="c6-srcbar" id="srcbar" role="img"></div>
+          <ul class="c6-srclegend" id="srclegend"></ul>
+        </section>
+        <section class="c6-card" aria-labelledby="iso-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="iso-h">ISMS 導入進度</h2><p class="c6-panel__sub">已完成任務 / 認證路線圖總任務</p></div><span id="iso-prov"></span></div>
+          <div id="gauge"></div>
+          <p class="c6-chart-summary">此為任務完成率，<strong>不是</strong>認證準備度分數；尚未提供 readiness 計分方法。</p>
+        </section>
+
+        <section class="c6-card" aria-labelledby="feed-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="feed-h">資料活動紀錄</h2><p class="c6-panel__sub">每筆紀錄標示資料來源</p></div></div>
+          <ul class="c6-feed" id="feed"></ul>
+        </section>
+        <section class="c6-card" aria-labelledby="st-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="st-h">Assessment Status</h2><p class="c6-panel__sub">評估狀態分布</p></div></div>
+          <ul class="c6-cov" id="status"></ul>
+        </section>
+        <section class="c6-card c6-card--spot c6-card--lift" aria-labelledby="fq-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="fq-h">FAIR · Scenario B</h2><p class="c6-panel__sub">最可能值點估計（未經模擬）</p></div><span id="fq-prov"></span></div>
+          <div id="fairq"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../js/core/namespace.js"></script>
+<script src="../js/core/format.js"></script>
+<script src="../js/core/provenance.js"></script>
+<script src="../data/risk-criteria.js"></script>
+<script src="../data/frameworks.js"></script>
+<script src="../data/defaults/fair-defaults.js"></script>
+<script src="../data/demo/demo-register.js"></script>
+<script src="../data/iso-roadmap.js"></script>
+<script src="../js/calculations/distributions.js"></script>
+<script src="../js/calculations/stats.js"></script>
+<script src="../js/calculations/riskMatrixEngine.js"></script>
+<script src="../js/calculations/fairMonteCarloEngine.js"></script>
+<script src="../js/charts/svg.js"></script>
+<script src="../js/charts/barChart.js"></script>
+<script src="../js/charts/lineChart.js"></script>
+<script src="../js/charts/riskMatrix.js"></script>
+<script src="../js/charts/gauge.js"></script>
+<script src="../js/ui/icons.js"></script>
+<script src="../js/ui/shell.js"></script>
+<script src="../js/pages/dashboard.js"></script>
+</body>
+</html>
