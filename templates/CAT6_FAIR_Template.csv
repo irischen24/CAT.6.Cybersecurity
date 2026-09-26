@@ -1,0 +1,6 @@
+﻿field,min,most_likely,max,unit,note
+CF,2,4,6,events/year,CAT6_DEFAULT demo value — replace with organization data
+PoA,0.5,0.6,0.8,probability,CAT6_DEFAULT demo value — replace with organization data
+Susceptibility,0.6,0.75,0.8,probability,CAT6_DEFAULT demo value — replace with organization data
+PrimaryLoss,1425000,1530000,2600000,TWD,CAT6_DEFAULT demo value — replace with organization data
+SecondaryLoss,600000,2600000,9200000,TWD,CAT6_DEFAULT demo value — replace with organization data

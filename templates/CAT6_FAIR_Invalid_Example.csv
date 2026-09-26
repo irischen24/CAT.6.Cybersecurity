@@ -1,1 +1,6 @@
-
+field,min,most_likely,max
+CF,6,4,2
+PoA,50%,abc,80%
+Susceptibility,0.6,0.75,0.8
+PrimaryLoss,1425000,1530000,2600000
+SecondaryLos,600000,2600000,9200000
