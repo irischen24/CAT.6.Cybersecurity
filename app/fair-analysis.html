@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAIR Analysis · CAT.6 Cybersecurity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/foundation.css">
+<link rel="stylesheet" href="../assets/css/app-shell.css">
+<link rel="stylesheet" href="../assets/css/dashboard.css">
+<link rel="stylesheet" href="../assets/css/fair.css">
+</head>
+<body>
+<div class="c6-root c6-app">
+  <a class="c6-skip" href="#main">跳至主要內容</a>
+  <div class="c6-bg" aria-hidden="true"><div class="c6-bg__blob c6-bg__blob--a"></div><div class="c6-bg__blob c6-bg__blob--b"></div><div class="c6-bg__grid"></div><div class="c6-bg__noise"></div></div>
+  <aside class="c6-side" id="c6-side" data-open="false" aria-label="側邊導覽"></aside>
+  <div class="c6-scrim" data-open="false"></div>
+
+  <div class="c6-main">
+    <header class="c6-topbar">
+      <button class="c6-iconbtn c6-topbar__menu" type="button" aria-controls="c6-side" aria-expanded="false" aria-label="開啟選單"></button>
+      <h1 class="c6-topbar__title">FAIR Analysis</h1>
+      <span class="c6-topbar__ctx" id="scenario-name"></span>
+      <div class="c6-topbar__tools"><span class="c6-badge">TWD · NT$</span></div>
+    </header>
+
+    <main id="main" class="c6-workspace">
+      <section class="c6-notice" id="default-notice" aria-live="polite">
+        <p class="c6-notice__text" id="notice-text"></p>
+        <div class="c6-notice__actions">
+          <button class="c6-btn c6-btn--secondary" type="button" id="use-defaults">Use CAT.6 Default Values</button>
+          <a class="c6-btn c6-btn--ghost" href="#inputs">Edit Values</a>
+          <a class="c6-btn c6-btn--ghost" href="#import">Import Organization Data</a>
+        </div>
+      </section>
+
+      <div class="c6-grid">
+        <section class="c6-card c6-span-2" id="inputs" aria-labelledby="in-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="in-h">輸入：三點估計（Min / Most Likely / Max）</h2><p class="c6-panel__sub">三角分布 Triangular(min, mode, max)，每次模擬重新抽樣</p></div></div>
+          <form class="c6-fair-inputs" id="fair-form" novalidate></form>
+        </section>
+
+        <section class="c6-card" aria-labelledby="sim-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="sim-h">模擬設定</h2><p class="c6-panel__sub">固定亂數種子可重現結果</p></div></div>
+          <div class="c6-sim">
+            <fieldset style="border:0;margin:0;padding:0;min-width:0">
+              <legend class="c6-var__lbl" style="margin-bottom:.375rem">Iterations 模擬次數</legend>
+              <div class="c6-seg" id="presets"></div>
+            </fieldset>
+            <label class="c6-field"><span class="c6-var__lbl">Random Seed 亂數種子</span><input class="c6-input" id="seed" type="number" inputmode="numeric" min="0" step="1"></label>
+            <pre class="c6-formula">TEF = CF × PoA
+LEF = TEF × Susceptibility
+LM  = Primary Loss + Secondary Loss
+Annual Risk = LEF × LM</pre>
+            <button class="c6-btn c6-btn--primary" type="button" id="run">Run Monte Carlo Simulation</button>
+            <div class="c6-progress" hidden id="progress">
+              <div class="c6-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="模擬進度"><div class="c6-progress__bar"></div></div>
+              <span class="c6-progress__text" aria-live="polite"></span>
+            </div>
+            <p class="c6-note">引擎：sfc32 可重現亂數 + 反函數抽樣。與筆記 numpy（PCG64）不是逐筆相同，但 1,000,000 次時 P50 差距 &lt; 0.1%。</p>
+          </div>
+        </section>
+
+        <section class="c6-card c6-span-full" id="import" aria-labelledby="imp-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="imp-h">匯入組織資料（CSV）</h2><p class="c6-panel__sub">欄位：field, min, most_likely, max · 機率可填 0.6 或 60%</p></div></div>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
+            <button class="c6-btn c6-btn--secondary" type="button" id="dl-template">下載 CAT6_FAIR_Template.csv</button>
+            <label class="c6-btn c6-btn--secondary" for="csv">選擇 CSV 檔案…</label>
+            <input class="c6-sr-only" type="file" id="csv" accept=".csv,text/csv">
+            <span class="c6-note" id="imp-status">.xlsx 匯入將在 Data Import Center 以 SheetJS 提供。</span>
+          </div>
+          <div id="imp-errors"></div>
+        </section>
+
+        <section class="c6-card c6-span-full" aria-labelledby="kpi-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="kpi-h">模擬結果</h2><p class="c6-panel__sub" id="run-meta">尚未執行</p></div><span id="res-prov"></span></div>
+          <div id="kpis"><div class="c6-empty">設定輸入值後按「Run Monte Carlo Simulation」，結果會顯示在這裡。</div></div>
+        </section>
+
+        <section class="c6-card c6-span-2" aria-labelledby="h-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="h-h">Annual Risk Distribution Histogram</h2><p class="c6-panel__sub">每根長條 = 落在該金額區間的模擬年度比例（顯示至 P99.5）</p></div></div>
+          <div id="hist"><div class="c6-empty">尚無模擬資料</div></div>
+          <p class="c6-chart-summary" id="hist-sum"></p>
+        </section>
+        <section class="c6-card" aria-labelledby="lc-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="lc-h">Loss Components 損失組成</h2><p class="c6-panel__sub">單次事件 LM = PL + SL</p></div></div>
+          <div id="components"><div class="c6-empty">尚無模擬資料</div></div>
+        </section>
+
+        <section class="c6-card c6-span-2" aria-labelledby="ex-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="ex-h">Annual Loss Exceedance Curve</h2><p class="c6-panel__sub">年度損失超過 X 的機率</p></div></div>
+          <div id="exc"><div class="c6-empty">尚無模擬資料</div></div>
+          <p class="c6-chart-summary" id="exc-sum"></p>
+        </section>
+        <section class="c6-card" aria-labelledby="pe-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="pe-h">計算追溯：最可能值點估計</h2><p class="c6-panel__sub">對照 FAIR 筆記 Step 2</p></div></div>
+          <div id="point"></div>
+        </section>
+
+        <section class="c6-card c6-span-full" aria-labelledby="pt-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="pt-h">Percentile Results</h2><p class="c6-panel__sub">P10 / P25 / P50 / Mean / P75 / P90 / P95</p></div>
+            <button class="c6-btn c6-btn--ghost" type="button" id="export" disabled>匯出 CSV</button></div>
+          <div id="ptable"><div class="c6-empty">尚無模擬資料</div></div>
+        </section>
+
+        <section class="c6-card c6-span-full" aria-labelledby="ia-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="ia-h">Input Assumptions 輸入假設</h2><p class="c6-panel__sub">每個值的來源、假設與理由</p></div></div>
+          <div id="atable"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../js/core/namespace.js"></script>
+<script src="../js/core/format.js"></script>
+<script src="../js/core/provenance.js"></script>
+<script src="../data/defaults/fair-defaults.js"></script>
+<script src="../js/calculations/rng.js"></script>
+<script src="../js/calculations/distributions.js"></script>
+<script src="../js/calculations/stats.js"></script>
+<script src="../js/calculations/fairMonteCarloEngine.js"></script>
+<script src="../js/services/fairAnalysisService.js"></script>
+<script src="../js/services/csvImportService.js"></script>
+<script src="../js/charts/svg.js"></script>
+<script src="../js/charts/fairCharts.js"></script>
+<script src="../js/ui/icons.js"></script>
+<script src="../js/ui/shell.js"></script>
+<script src="../js/pages/fair-analysis.js"></script>
+</body>
+</html>
