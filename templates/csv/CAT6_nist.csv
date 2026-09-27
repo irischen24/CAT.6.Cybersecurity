@@ -1,0 +1,2 @@
+﻿# CAT.6 NIST SP 800-30 評估 — 以 # 開頭的列會被忽略
+Assessment ID,Risk ID,Source Type,Threat Source,Threat Event,Vulnerability,Vulnerability Severity,Predisposing Condition,Existing Controls,Initiation / Occurrence Likelihood,Adverse Impact Likelihood,Impact Level

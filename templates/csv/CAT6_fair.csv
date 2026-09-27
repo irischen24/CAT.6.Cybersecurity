@@ -1,0 +1,7 @@
+﻿# CAT.6 FAIR 輸入（三點估計） — 以 # 開頭的列會被忽略
+field,min,most_likely,max
+CF,2,4,6
+PoA,0.5,0.6,0.8
+Susceptibility,0.6,0.75,0.8
+PrimaryLoss,1425000,1530000,2600000
+SecondaryLoss,600000,2600000,9200000

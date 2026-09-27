@@ -1,0 +1,2 @@
+﻿# CAT.6 Risk Register 風險登錄表 — 以 # 開頭的列會被忽略
+Risk ID,Scenario,Asset,Threat Source,Threat Event,Vulnerability,Existing Controls,Likelihood,Impact,Treatment,Owner,Due Date,Status,Residual Likelihood,Residual Impact,Frameworks,CIS Controls

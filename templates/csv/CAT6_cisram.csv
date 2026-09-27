@@ -1,0 +1,2 @@
+﻿# CAT.6 CIS RAM Risk Register — 以 # 開頭的列會被忽略
+CIS RAM ID,Risk ID,Scenario,Asset,Threat,Vulnerability,Impact Description,Existing Safeguards,Inherent Likelihood,Inherent Impact,Safeguard Assessment,Residual Likelihood,Residual Impact,Recommended Safeguards
