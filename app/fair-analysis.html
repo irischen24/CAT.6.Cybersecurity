@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
 <head>
@@ -12,6 +11,7 @@
 <link rel="stylesheet" href="../assets/css/foundation.css">
 <link rel="stylesheet" href="../assets/css/app-shell.css">
 <link rel="stylesheet" href="../assets/css/dashboard.css">
+<link rel="stylesheet" href="../assets/css/components.css">
 <link rel="stylesheet" href="../assets/css/fair.css">
 </head>
 <body>
@@ -25,21 +25,35 @@
     <header class="c6-topbar">
       <button class="c6-iconbtn c6-topbar__menu" type="button" aria-controls="c6-side" aria-expanded="false" aria-label="開啟選單"></button>
       <h1 class="c6-topbar__title">FAIR Analysis</h1>
-      <span class="c6-topbar__ctx" id="scenario-name"></span>
-      <div class="c6-topbar__tools"><span class="c6-badge">TWD · NT$</span></div>
+      <span class="c6-topbar__ctx" id="c6-ctx"></span>
+      <div class="c6-topbar__tools">
+        <label class="c6-search"><span class="c6-sr-only">搜尋風險情境</span><span class="c6-search__icon" data-icon="search"></span><input class="c6-input" type="search" placeholder="搜尋情境、資產、控制…"></label>
+        <span class="c6-badge">TWD · NT$</span>
+      </div>
     </header>
 
-    <main id="main" class="c6-workspace">
+    <main id="main" class="c6-workspace" tabindex="-1">
+      <div id="c6-subnav"></div>
       <section class="c6-notice" id="default-notice" aria-live="polite">
         <p class="c6-notice__text" id="notice-text"></p>
         <div class="c6-notice__actions">
           <button class="c6-btn c6-btn--secondary" type="button" id="use-defaults">Use CAT.6 Default Values</button>
           <a class="c6-btn c6-btn--ghost" href="#inputs">Edit Values</a>
-          <a class="c6-btn c6-btn--ghost" href="#import">Import Organization Data</a>
+          <a class="c6-btn c6-btn--ghost" href="data-import.html?ds=fair">Import Organization Data</a>
         </div>
       </section>
 
       <div class="c6-grid">
+        <section class="c6-card c6-span-full" aria-labelledby="sc-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="sc-h">量化的風險情境</h2><p class="c6-panel__sub">FAIR 為選用的量化步驟（Workflow 01 · Optional FAIR Quantification）；輸入值與模擬紀錄存在目前的評估中</p></div><span id="in-prov"></span></div>
+          <div class="c6-row" style="flex-wrap:wrap;gap:.75rem;align-items:flex-end">
+            <label class="c6-field" style="min-width:16rem;flex:1"><span class="c6-var__lbl">Risk Scenario 風險情境</span><select class="c6-input" id="risk-sel"></select></label>
+            <button class="c6-btn c6-btn--secondary" type="button" id="save-inputs">儲存輸入值</button>
+            <a class="c6-btn c6-btn--ghost" id="risk-link" href="risk-register.html">在 Risk Register 檢視</a>
+          </div>
+          <p class="c6-note" id="save-status" aria-live="polite" style="margin-top:.5rem"></p>
+        </section>
+
         <section class="c6-card c6-span-2" id="inputs" aria-labelledby="in-h">
           <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="in-h">輸入：三點估計（Min / Most Likely / Max）</h2><p class="c6-panel__sub">三角分布 Triangular(min, mode, max)，每次模擬重新抽樣</p></div></div>
           <form class="c6-fair-inputs" id="fair-form" novalidate></form>
@@ -57,22 +71,24 @@
 LEF = TEF × Susceptibility
 LM  = Primary Loss + Secondary Loss
 Annual Risk = LEF × LM</pre>
-            <button class="c6-btn c6-btn--primary" type="button" id="run">Run Monte Carlo Simulation</button>
+            <div class="c6-row" style="gap:.5rem;flex-wrap:wrap"><button class="c6-btn c6-btn--primary" type="button" id="run">Run Monte Carlo Simulation</button><button class="c6-btn c6-btn--ghost" type="button" id="cancel" hidden>取消</button></div>
+            <p class="c6-note" id="run-state" role="status" aria-live="polite"><span class="c6-st c6-st--NOT_ASSESSED">Idle</span> 尚未執行</p>
             <div class="c6-progress" hidden id="progress">
               <div class="c6-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="模擬進度"><div class="c6-progress__bar"></div></div>
               <span class="c6-progress__text" aria-live="polite"></span>
             </div>
-            <p class="c6-note">引擎：sfc32 可重現亂數 + 反函數抽樣。與筆記 numpy（PCG64）不是逐筆相同，但 1,000,000 次時 P50 差距 &lt; 0.1%。</p>
+            <p class="c6-note" id="engine-note">引擎：Web Worker（背景執行，UI 不凍結）；以 file:// 開啟時自動改用主執行緒分段計算。兩者使用同一個 sfc32 可重現亂數引擎，相同 seed 得到相同結果。</p>
           </div>
         </section>
 
         <section class="c6-card c6-span-full" id="import" aria-labelledby="imp-h">
-          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="imp-h">匯入組織資料（CSV）</h2><p class="c6-panel__sub">欄位：field, min, most_likely, max · 機率可填 0.6 或 60%</p></div></div>
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="imp-h">匯入組織資料（CSV）</h2><p class="c6-panel__sub">欄位：field, min, most_likely, max · 機率可填 0.6 或 60% · XLSX 請使用 Data Import Center</p></div></div>
           <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
             <button class="c6-btn c6-btn--secondary" type="button" id="dl-template">下載 CAT6_FAIR_Template.csv</button>
             <label class="c6-btn c6-btn--secondary" for="csv">選擇 CSV 檔案…</label>
             <input class="c6-sr-only" type="file" id="csv" accept=".csv,text/csv">
-            <span class="c6-note" id="imp-status">.xlsx 匯入將在 Data Import Center 以 SheetJS 提供。</span>
+            <a class="c6-btn c6-btn--ghost" href="data-import.html?ds=fair">XLSX / 完整匯入流程（Import Center）</a>
+            <span class="c6-note" id="imp-status"></span>
           </div>
           <div id="imp-errors"></div>
         </section>
@@ -104,7 +120,7 @@ Annual Risk = LEF × LM</pre>
 
         <section class="c6-card c6-span-full" aria-labelledby="pt-h">
           <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="pt-h">Percentile Results</h2><p class="c6-panel__sub">P10 / P25 / P50 / Mean / P75 / P90 / P95</p></div>
-            <button class="c6-btn c6-btn--ghost" type="button" id="export" disabled>匯出 CSV</button></div>
+            <div class="c6-row" style="gap:.5rem"><button class="c6-btn c6-btn--ghost" type="button" id="export" disabled>匯出 CSV</button><button class="c6-btn c6-btn--ghost" type="button" id="export-x" disabled>匯出 XLSX</button></div></div>
           <div id="ptable"><div class="c6-empty">尚無模擬資料</div></div>
         </section>
 
@@ -112,25 +128,66 @@ Annual Risk = LEF × LM</pre>
           <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="ia-h">Input Assumptions 輸入假設</h2><p class="c6-panel__sub">每個值的來源、假設與理由</p></div></div>
           <div id="atable"></div>
         </section>
+
+        <section class="c6-card c6-span-full" aria-labelledby="hi-h">
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="hi-h">Simulation Runs 模擬紀錄</h2><p class="c6-panel__sub">每次完成的模擬會保存摘要（供 Dashboard 與 FAIR 報告使用）</p></div><a class="c6-btn c6-btn--ghost" href="reports.html?type=fair">產生 FAIR 報告</a></div>
+          <div id="runs"></div>
+        </section>
       </div>
     </main>
   </div>
 </div>
 
 <script src="../js/core/namespace.js"></script>
+<script src="../js/config.js"></script>
 <script src="../js/core/format.js"></script>
 <script src="../js/core/provenance.js"></script>
+<script src="../js/core/dom.js"></script>
+<script src="../js/core/repository.js"></script>
+<script src="../data/risk-criteria.js"></script>
+<script src="../data/frameworks.js"></script>
+<script src="../data/references.js"></script>
+<script src="../data/nist-likelihood.js"></script>
+<script src="../data/catalog/iso27001.js"></script>
+<script src="../data/catalog/csf2.js"></script>
+<script src="../data/catalog/cis-controls.js"></script>
+<script src="../data/catalog/nist-impact-risk.js"></script>
+<script src="../data/catalog/framework-library.js"></script>
+<script src="../data/catalog/framework-mapping.js"></script>
+<script src="../data/defaults/_meta.js"></script>
+<script src="../data/defaults/workspace-defaults.js"></script>
+<script src="../data/defaults/risk-defaults.js"></script>
+<script src="../data/defaults/nist-defaults.js"></script>
+<script src="../data/defaults/cis-ram-defaults.js"></script>
+<script src="../data/defaults/cis-controls-defaults.js"></script>
+<script src="../data/defaults/nist-csf-defaults.js"></script>
+<script src="../data/defaults/iso-readiness-defaults.js"></script>
 <script src="../data/defaults/fair-defaults.js"></script>
+<script src="../data/defaults/parameters.js"></script>
 <script src="../js/calculations/rng.js"></script>
 <script src="../js/calculations/distributions.js"></script>
 <script src="../js/calculations/stats.js"></script>
+<script src="../js/calculations/riskMatrixEngine.js"></script>
+<script src="../js/calculations/nistRiskEngine.js"></script>
+<script src="../js/calculations/cisRamEngine.js"></script>
+<script src="../js/calculations/cisControlsEngine.js"></script>
+<script src="../js/calculations/csfEngine.js"></script>
+<script src="../js/calculations/treatmentEngine.js"></script>
+<script src="../js/calculations/isoReadinessEngine.js"></script>
 <script src="../js/calculations/fairMonteCarloEngine.js"></script>
-<script src="../js/services/fairAnalysisService.js"></script>
-<script src="../js/services/csvImportService.js"></script>
+<script src="../js/services/workspace.js"></script>
+<script src="../js/services/xlsx.js"></script>
+<script src="../js/services/exportService.js"></script>
 <script src="../js/charts/svg.js"></script>
-<script src="../js/charts/fairCharts.js"></script>
+<script src="../js/charts/hbars.js"></script>
 <script src="../js/ui/icons.js"></script>
 <script src="../js/ui/shell.js"></script>
+<script src="../js/ui/table.js"></script>
+<script src="../js/ui/form.js"></script>
+<script src="../js/ui/page.js"></script>
+<script src="../js/services/fairAnalysisService.js"></script>
+<script src="../js/services/csvImportService.js"></script>
+<script src="../js/charts/fairCharts.js"></script>
 <script src="../js/pages/fair-analysis.js"></script>
 </body>
 </html>
