@@ -20,8 +20,8 @@
   /* Accessible badge markup: icon + text, never color alone. */
   function badge(source) {
     var s = SOURCES[source];
-    return '<span class="c6-prov c6-prov--' + source.toLowerCase() + '" title="資料來源：' + s.label + '">' +
-      '<span class="c6-prov__icon" aria-hidden="true">' + s.icon + '</span>' + s.en + '</span>';
+    return '<span class="c6-prov c6-prov--' + source.toLowerCase() + '" title="資料來源：' + (source === 'CAT6_DEFAULT' ? 'CAT.6 DEFAULT / ASSUMED VALUE — 示範假設值，非組織實際狀況' : s.label) + '">' +
+      '<span class="c6-prov__icon" aria-hidden="true">' + s.icon + '</span>' + (source === 'CAT6_DEFAULT' ? 'CAT.6 DEFAULT / ASSUMED' : s.en) + '</span>';
   }
   C.util.provenance = { SOURCES: SOURCES, wrap: wrap, tally: tally, badge: badge };
 })(globalThis.CAT6);
