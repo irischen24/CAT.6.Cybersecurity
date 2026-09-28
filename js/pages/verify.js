@@ -65,6 +65,7 @@
     }).catch(function (e) { show(null, e.message); });
   }
 
+  document.querySelectorAll('[data-brand]').forEach(function (n) { n.innerHTML = C.ui.brand.lockup(); });
   state.provider = provider();
   var q = new URLSearchParams(location.search), id = (q.get('id') || '').trim().toUpperCase(), v = (q.get('v') || '').trim();
   document.getElementById('q-id').value = id; document.getElementById('q-v').value = v;

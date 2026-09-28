@@ -4,7 +4,7 @@
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var FW = C.data.frameworks, LIFE = C.data.lifecycle, REF = {};
   C.data.references.forEach(function (r) { REF[r.id] = r; });
-  document.querySelectorAll('[data-mark]').forEach(function (n) { n.innerHTML = C.ui.icons.mark(); n.style.display = 'inline-flex'; n.firstChild.style.width = '100%'; n.firstChild.style.height = '100%'; });
+  document.querySelectorAll('[data-brand]').forEach(function (n) { n.innerHTML = C.ui.brand.lockup({ cls: 'c6-brand-lockup--nav', text: 'CAT.6' }); });
   C.ui.shell.spotlight();
 
   /* ---- Constellation ---- */
@@ -72,6 +72,16 @@
     var r = REF[f.ref];
     return '<article class="c6-card c6-card--spot c6-card--lift c6-fw"><div class="c6-fw__top"><h3 class="c6-fw__name">' + f.name + '</h3><span class="c6-badge">' + f.layer + '</span></div>' +
       '<p class="c6-fw__role">' + f.role + '</p><a class="c6-fw__ref" href="' + r.url + '" target="_blank" rel="noopener">官方來源：' + r.title + '<span class="c6-sr-only">（另開新視窗）</span></a></article>';
+  }).join('');
+
+  /* ---- Trust & Security (from data/compliance.js — never hard-coded; demo records can only show DEMO / PLANNED / ROADMAP) ---- */
+  var CP = C.data.compliance, I = C.ui.icons;
+  document.getElementById('trust-grid').innerHTML = CP.items.map(function (it) {
+    return '<article class="c6-card c6-card--spot c6-trust__card"><div class="c6-trust__icon" aria-hidden="true">' + I.icon(it.icon) + '</div>' +
+      '<h3 class="c6-trust__name">' + it.name + '</h3><p class="c6-trust__sub">' + it.subtitle + '</p>' +
+      '<p class="c6-trust__desc">' + it.description.split('。')[0] + '。</p>' +
+      '<p class="c6-trust__status"><span class="c6-sr-only">狀態：</span>' + CP.badges(it).map(function (b) { return '<span class="c6-tbadge c6-tbadge--' + b.toLowerCase() + '">' + b + '</span>'; }).join('') + '<span class="c6-trust__label">' + it.statusLabel + '</span></p>' +
+      '<a class="c6-trust__link" href="trust/#' + it.id + '">View Demo Document<span class="c6-sr-only">：' + it.name + '（示範文件，非正式認證）</span> →</a></article>';
   }).join('');
 
   /* ---- Nav state + scroll-linked parallax (rAF, transform only) ---- */
