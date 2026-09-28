@@ -50,6 +50,12 @@
   function list(items) { return { kind: 'list', items: items }; }
   var SRC = { key: 'source', label: 'Provenance 來源', prov: true };
   function hasDR(blocks) { return blocks.some(function (b) { return JSON.stringify(b).indexOf(DR) >= 0; }); }
+  /* Latest saved simulation for every risk scenario (one row per scenario). */
+  function latestPerRisk(d) {
+    var by = {};
+    (d.fairRuns || []).forEach(function (r) { var k = r.riskId || '—'; if (!by[k] || (r.at || '') > (by[k].at || '')) by[k] = r; });
+    return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.summaries.AnnualRisk.Mean - a.summaries.AnnualRisk.Mean; });
+  }
   function latestRun(d) { return (d.fairRuns || []).slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); })[0] || null; }
   function lvlName(id) { return id ? (C.ui && C.ui.page ? C.ui.page.NIST_NAME[id] : id) : DR; }
 
@@ -97,8 +103,9 @@
     out.push(p('風險處理：進行中 ' + tr.OPEN + '、逾期 ' + tr.OVERDUE + '、已完成 ' + tr.COMPLETED + '。' +
       (rows.filter(function (r) { return (r.band === 'HIGH' || r.band === 'CRITICAL') && !(ctx.d.treatments || []).some(function (t) { return t.riskId === r.id; }) && r._raw.treatment !== 'Accept'; }).length
         ? '仍有 High / Critical 風險尚無處理計畫。' : '所有 High / Critical 風險皆已有處理計畫或接受決策。')));
-    var run = latestRun(ctx.d);
-    if (run && ctx.wants('fair')) out.push(p('FAIR 量化（' + run.riskId + '，' + F.num(run.iterations) + ' 次模擬，seed ' + run.seed + '）：年化預期損失 Mean ' + money(run.summaries.AnnualRisk.Mean) + '，P90 ' + money(run.summaries.AnnualRisk.P90) + '。'));
+    var run = ctx.fairRun, per = latestPerRisk(ctx.d);
+    if (per.length > 1 && ctx.wants('fair')) out.push(p('FAIR 量化共 ' + per.length + ' 個情境（各取最新一次模擬）；年化預期損失最高為 ' + per[0].riskId + '：Mean ' + money(per[0].summaries.AnnualRisk.Mean) + '，P90 ' + money(per[0].summaries.AnnualRisk.P90) + '；各情境 ALE 合計 ' + money(per.reduce(function (t, r) { return t + r.summaries.AnnualRisk.Mean; }, 0)) + '（平均值可直接加總；P90 / P95 不可相加）。'));
+    if (run && ctx.wants('fair')) out.push(p('FAIR 量化' + (per.length > 1 ? '詳細情境' : '') + '（' + run.riskId + '，' + F.num(run.iterations) + ' 次模擬，seed ' + run.seed + '）：年化預期損失 Mean ' + money(run.summaries.AnnualRisk.Mean) + '，P90 ' + money(run.summaries.AnnualRisk.P90) + '。'));
     if (ctx.wants('iso')) {
       var R = ctx.iso();
       out.push(p(C.calc.isoReadiness.label + '：' + (R.overall == null ? DR : F.pct(R.overall)) + '（依 ' + R.basedOn + ' / ' + R.of + ' 個有資料的領域等權平均；非 ISO 官方評分，不預測驗證結果）。'));
@@ -195,7 +202,7 @@
     if (t === 'combined' || t === 'cat6-risk' || t === 'executive' || t === 'mapping') out = out.concat(fwCsf(ctx, t !== 'executive'));
     if (t === 'mapping' || t === 'combined' || t === 'cat6-risk') out = out.concat(fwMapping(ctx));
     if (t === 'iso-gap' || t === 'combined') out = out.concat(isoGap(ctx, t === 'iso-gap'));
-    if (t === 'fair') out.push(p('本報告聚焦 FAIR 財務量化；對應框架：' + (latestRun(d) ? '情境 ' + latestRun(d).riskId + ' 亦列於 Risk Register 及其處理計畫。' : '尚無模擬紀錄。')));
+    if (t === 'fair') out.push(p('本報告聚焦 FAIR 財務量化；對應框架：' + (ctx.fairRun ? '已量化情境 ' + latestPerRisk(d).map(function (r) { return r.riskId; }).join('、') + ' 皆列於 Risk Register 及其處理計畫。' : '尚無模擬紀錄。')));
     if (t === 'iso-readiness') out.push(p('ISO/IEC 27001 準備度依模組資料推導（條款差異、SoA、風險評鑑與處理、證據、內部稽核、矯正措施與管理審查），詳見 ISO Readiness 章節。'));
     return out.length ? out : [callout(DR, 'warn')];
   };
@@ -308,15 +315,28 @@
   }
 
   B.fair = function (ctx) {
-    var run = latestRun(ctx.d), fi = (ctx.d.fairInputs || [])[0];
+    var run = ctx.fairRun, fi = (ctx.d.fairInputs || [])[0];
     if (!run) {
       var out = [callout('尚未執行 FAIR 蒙地卡羅模擬：' + DR + '（請於 FAIR Analysis 執行並保存模擬）', 'warn')];
       if (fi) { var inp = {}; fi.fields.forEach(function (f) { inp[f.field] = f.value; }); var pe = C.calc.fair.pointEstimate(inp); out.push(p('點估計（Most Likely 值）：Annual Risk ≈ ' + money(pe.AnnualRisk) + '；點估計會低估尾端風險。')); }
       return out;
     }
     var s = run.summaries, cols = ['P10', 'P25', 'P50', 'Mean', 'P75', 'P90', 'P95'], MONEY = { PrimaryLoss: 1, SecondaryLoss: 1, LM: 1, AnnualRisk: 1 };
-    var o = [kv([['Risk Scenario', run.riskId || '—'], ['Run', run.id + ' · ' + (run.at || '').replace('T', ' ').slice(0, 16)], ['Iterations', F.num(run.iterations)], ['Random Seed', String(run.seed)], ['Engine', run.engine === 'worker' ? 'Web Worker' : 'Main thread'],
-      ['Annual Risk Mean (ALE)', money(s.AnnualRisk.Mean)], ['Annual Risk P90', money(s.AnnualRisk.P90)], ['Annual Risk P95', money(s.AnnualRisk.P95)]])];
+    /* 1) Multi-scenario summary: latest simulation of every scenario */
+    var per = latestPerRisk(ctx.d), rname = {}; (ctx.d.risks || []).forEach(function (r) { rname[r.id] = r.scenario; });
+    var o = [{ kind: 'h', text: '各情境比較（每個情境取最新一次模擬）' }];
+    o.push(table('FAIR 情境彙總：年化風險（Annual Risk）', [{ key: 'riskId', label: 'Risk ID' }, { key: 'scenario', label: 'Scenario', wrap: true }, { key: 'run', label: 'Run' }, { key: 'at', label: 'Date' },
+      { key: 'iters', label: 'Iterations', num: true }, { key: 'seed', label: 'Seed', num: true }, { key: 'mean', label: 'ALE Mean', num: true }, { key: 'p50', label: 'P50', num: true }, { key: 'p90', label: 'P90', num: true }, { key: 'p95', label: 'P95', num: true }, { key: 'inputs', label: 'Inputs', prov: true }],
+      per.map(function (r) { var a = r.summaries.AnnualRisk; return { riskId: r.riskId || '—', scenario: rname[r.riskId] || '（不在目前的 Risk Register）', run: r.id + (r.id === run.id ? ' ◀ 詳細' : ''), at: (r.at || '').slice(0, 10),
+        iters: F.num(r.iterations), seed: String(r.seed), mean: money(a.Mean), p50: money(a.P50), p90: money(a.P90), p95: money(a.P95), inputs: r.defaultsUsed ? 'CAT6_DEFAULT' : 'Organization' }; }), { wide: true }));
+    if (per.length > 1) o.push(chart(C.charts.report.ranges(per.map(function (r) { var a = r.summaries.AnnualRisk; return { label: r.riskId, p50: a.P50, mean: a.Mean, p90: a.P90, p95: a.P95 }; }), { label: 'FAIR scenario comparison' }),
+      'Figure · 各情境年化風險比較（P50–P95 區間、Mean、P90）', per.map(function (r) { return r.riskId + ' Mean ' + money(r.summaries.AnnualRisk.Mean) + ' / P90 ' + money(r.summaries.AnnualRisk.P90); }).join('；') + '。'));
+    o.push(p('各情境為獨立模擬；合計值僅為平均值（ALE）的加總，百分位（P90 / P95）不能直接相加。'));
+    if (per.some(function (r) { return r.defaultsUsed; })) o.push(callout(DEFAULT_SENTENCE + '（標示 CAT6_DEFAULT 的情境使用預設輸入）', 'warn'));
+    /* 2) Detail of the selected (default: latest) simulation */
+    o.push({ kind: 'h', text: '情境詳細：' + (run.riskId || '—') + (rname[run.riskId] ? ' · ' + rname[run.riskId] : '') });
+    o.push(kv([['Risk Scenario', run.riskId || '—'], ['Run', run.id + ' · ' + (run.at || '').replace('T', ' ').slice(0, 16)], ['Iterations', F.num(run.iterations)], ['Random Seed', String(run.seed)], ['Engine', run.engine === 'worker' ? 'Web Worker' : 'Main thread'],
+      ['Annual Risk Mean (ALE)', money(s.AnnualRisk.Mean)], ['Annual Risk P90', money(s.AnnualRisk.P90)], ['Annual Risk P95', money(s.AnnualRisk.P95)]]));
     if (run.defaultsUsed) o.push(callout(DEFAULT_SENTENCE + '（FAIR 輸入含 CAT6_DEFAULT）', 'warn'));
     o.push(table('FAIR 輸入（三點估計）', [{ key: 'field', label: 'Input' }, { key: 'min', label: 'Min', num: true }, { key: 'ml', label: 'Most Likely', num: true }, { key: 'max', label: 'Max', num: true }, { key: 'unit', label: 'Unit' }, SRC],
       (run.inputs || []).map(function (f) { return { field: f.field, min: f.value.min, ml: f.value.mostLikely, max: f.value.max, unit: f.unit || '', source: f.source }; })));
@@ -435,6 +455,7 @@
     if (type === 'cat6-risk' || type === 'executive') fws = fws.filter(function (f) { return f !== 'ISO27001' || type === 'executive'; });
     var ctx = { type: type, info: info, d: d, a: a, fws: fws, mode: o.mode || 'local', today: o.today, generatedAt: o.generatedAt || new Date().toISOString(),
       risks: riskRows(d), defaults: defaultsUsed(d),
+      fairRun: (o.fairRunId && (d.fairRuns || []).filter(function (r) { return r.id === o.fairRunId; })[0]) || latestRun(d),
       iso: function () { return isoCache || (isoCache = C.calc.isoReadiness.compute({ context: (d.isoContext || [])[0], clauses: d.isoClauses, soa: d.isoSoa, risks: d.risks, treatments: d.treatments, evidence: d.evidence, audits: d.audits, findings: d.findings, capas: d.capas, reviews: d.reviews })); } };
     ctx.wants = function (sec) {
       var rule = OPTIONAL[sec] ? OPTIONAL[sec][type] : 1;
@@ -452,7 +473,7 @@
       return { id: id, title: TITLES[id], status: hasDR(blocks) ? 'PARTIAL' : 'READY', blocks: blocks };
     });
     return { type: type, title: info.en, subtitle: info.zh, generatedAt: ctx.generatedAt, assessment: a, defaultsUsed: ctx.defaults,
-      defaultSentence: DEFAULT_SENTENCE, sections: sections, frameworks: fws };
+      defaultSentence: DEFAULT_SENTENCE, sections: sections, frameworks: fws, fairRunId: ctx.fairRun ? ctx.fairRun.id : null, hasFair: ctx.wants('fair') };
   }
 
   /* Every table block → exporter tables (CSV / XLSX). Keeps provenance columns and the defaults sentence. */
@@ -475,6 +496,6 @@
     return n;
   }
 
-  C.services.reportBuilder = { TYPES: TYPES, ORDER: ORDER, TITLES: TITLES, build: build, toTables: toTables, DEFAULT_SENTENCE: DEFAULT_SENTENCE,
+  C.services.reportBuilder = { latestPerRisk: latestPerRisk, TYPES: TYPES, ORDER: ORDER, TITLES: TITLES, build: build, toTables: toTables, DEFAULT_SENTENCE: DEFAULT_SENTENCE,
     COLLECTIONS: ['risks', 'treatments', 'nist', 'cisram', 'cisControls', 'cisSafeguards', 'csf', 'isoContext', 'isoClauses', 'isoSoa', 'isoTasks', 'audits', 'findings', 'capas', 'reviews', 'evidence', 'fairInputs', 'fairRuns', 'importLog'] };
 })(globalThis.CAT6);
