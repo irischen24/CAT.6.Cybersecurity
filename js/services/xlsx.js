@@ -137,7 +137,11 @@
   function read(buf) {
     var dec = new TextDecoder();
     return unzip(buf).then(function (files) {
-      var get = function (p) { return files[p] ? dec.decode(files[p]) : null; };
+      /* Some producers (Open XML SDK / .NET, some online converters) write prefixed element names such as
+       * <x:workbook>, <x:sheet>, <x:c>. Strip element prefixes so the same parser handles both forms; also drop a BOM.
+       * Attribute prefixes (r:id) are left untouched. Part names are matched case-insensitively. */
+      var lower = {}; Object.keys(files).forEach(function (k) { lower[k.toLowerCase()] = k; });
+      var get = function (p) { var k = files[p] ? p : lower[String(p).toLowerCase()]; return k && files[k] ? dec.decode(files[k]).replace(/^\uFEFF/, '').replace(/<(\/?)[A-Za-z_][\w.-]*:(?=[A-Za-z_])/g, '<$1') : null; };
       var wb = get('xl/workbook.xml'); if (!wb) throw new Error('不是有效的 .xlsx（缺少 xl/workbook.xml）。');
       var rels = get('xl/_rels/workbook.xml.rels') || '', relMap = {}, rm, relRe = /<Relationship\b([^>]*)\/?>/g;
       while ((rm = relRe.exec(rels))) relMap[attr(rm[1], 'Id')] = attr(rm[1], 'Target');
@@ -145,7 +149,8 @@
       if (sst) { var si, siRe = /<si>([\s\S]*?)<\/si>/g; while ((si = siRe.exec(sst))) shared.push(texts(si[1])); }
       var sheets = [], sm, shRe = /<sheet\b([^>]*?)\/?>/g;
       while ((sm = shRe.exec(wb))) {
-        var target = relMap[attr(sm[1], 'r:id')] || '', path = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+        var rid = attr(sm[1], 'r:id') || (/\s[\w.-]+:id="([^"]*)"/.exec(sm[1]) || [])[1];
+        var target = relMap[rid] || '', path = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
         var xml = get(path);
         if (xml) sheets.push({ name: attr(sm[1], 'name'), rows: parseSheet(xml, shared) });
       }
