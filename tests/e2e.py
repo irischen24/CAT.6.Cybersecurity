@@ -10,7 +10,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 OUT = os.environ.get('E2E_OUT', os.path.join(tempfile.gettempdir(), 'cat6-e2e'))
 os.makedirs(OUT, exist_ok=True)
 PORT = int(os.environ.get('E2E_PORT', '8765'))
-PAGES = ['index.html'] + ['app/' + f for f in sorted(os.listdir(os.path.join(ROOT, 'app'))) if f.endswith('.html')]
+PAGES = ['index.html', 'verify/index.html'] + ['app/' + f for f in sorted(os.listdir(os.path.join(ROOT, 'app'))) if f.endswith('.html')]
 VIEWPORTS = [(1440, 900), (820, 1180), (360, 780)]
 IGNORE = re.compile(r'Failed to load resource|fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|net::ERR_')
 results = []
@@ -181,7 +181,55 @@ with sync_playwright() as p:
         ok('PDF %s: A4 (%s pt), %d pages' % (typ, size.group(0) if size else '?', pages), size and abs(float(size.group(1)) - 595.3) < 2 and pages >= 3)
         subprocess.run(['pdftoppm', '-r', '60', '-png', '-f', '1', '-l', '3', pdf, os.path.join(OUT, 'pdf-%s' % typ)])
         txt = subprocess.run(['pdftotext', pdf, '-'], capture_output=True, text=True).stdout
-        ok('PDF %s: page numbers + default notice' % typ, 'Page 2 /' in txt and 'CAT.6 default / assumed values' in txt)
+        ok('PDF %s: Page X of Y + DRAFT marking + default notice' % typ, ('Page 2 of %d' % pages) in re.sub(r'\s+', ' ', txt) and 'DRAFT — NOT FINALIZED' in txt and 'CAT.6 default / assumed values' in txt)
+    # ---------- 7a. formal report: finalize → PDF → QR → verification page ----------
+    pg.goto(BASE + 'app/reports.html?type=combined'); settle(pg)
+    pg.select_option('#cls', 'CONFIDENTIAL'); pg.fill('#gen-by', 'E2E Auditor')
+    pg.click('#finalize'); pg.wait_for_selector('#reg code', timeout=15000)
+    rid = pg.evaluate("document.querySelector('#reg tbody tr td strong').textContent")
+    ok('Finalize: Report ID created and listed', re.match(r'^REP-\d{8}-[0-9A-Z]{5}$', rid or '') is not None, rid)
+    ok('Finalized preview shows identity + verification page', rid in pg.inner_text('#preview') and 'Report Verification' in pg.inner_text('#preview') and pg.locator('#preview svg.c6r-qr').count() == 1)
+    sha = pg.evaluate("document.querySelector('#reg tbody tr code').getAttribute('title')")
+    pg.evaluate("() => { window.print = () => {}; }")
+    pg.locator('#reg [data-r="print"]').first.click(); pg.wait_for_timeout(300)
+    pdf = os.path.join(OUT, 'CAT6_formal_report.pdf'); pg.pdf(path=pdf, prefer_css_page_size=True, print_background=True)
+    info = subprocess.run(['pdfinfo', pdf], capture_output=True, text=True).stdout; pages = int(re.search(r'Pages:\s+(\d+)', info).group(1))
+    txt = subprocess.run(['pdftotext', pdf, '-'], capture_output=True, text=True).stdout
+    per = [re.sub(r'\s+', ' ', subprocess.run(['pdftotext', '-f', str(i), '-l', str(i), pdf, '-'], capture_output=True, text=True).stdout) for i in range(1, pages + 1)]
+    ok('Formal PDF: every page after the cover has Page i of N + Report ID + classification', all(('Page %d of %d' % (i + 1, pages)) in t and rid in t and 'CONFIDENTIAL' in t for i, t in enumerate(per) if i > 0), '%d pages' % pages)
+    ok('Formal PDF: cover identity block (org, ID, version, classification)', rid in per[0] and 'CONFIDENTIAL' in per[0] and 'Version' in per[0] and 'E2E Auditor' in per[0])
+    ok('Formal PDF: SHA-256 on final page equals registry', sha in per[-1] or sha in per[-2] + per[-1])
+    ok('Formal PDF: disclaimer + copyright + visual-seal disclaimer', 'Methodology Boundary' in txt and 'All rights reserved' in txt and 'DEMO / VISUAL SEAL ONLY' in txt and 'NOT SIGNED' in txt and 'TSA NOT CONNECTED' in txt)
+    import cv2, glob as _g
+    qrtxt = ''
+    for idx in range(max(1, pages - 1), pages + 1):
+        subprocess.run(['pdftoppm', '-r', '150', '-png', '-f', str(idx), '-l', str(idx), pdf, os.path.join(OUT, 'vp%d' % idx)])
+        for f in _g.glob(os.path.join(OUT, 'vp%d*.png' % idx)):
+            d, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(f))
+            if d: qrtxt = d
+    ok('QR code decodes to this report\'s verification URL', ('verify/?id=' + rid + '&v=1.0') in qrtxt, qrtxt)
+    with pg.expect_download() as dl: pg.locator('#reg [data-r="manifest"]').first.click()
+    man = os.path.join(OUT, rid + '.cat6report.json'); dl.value.save_as(man)
+    import hashlib
+    ok('Manifest SHA-256 (sha256sum) equals the registry hash', hashlib.sha256(open(man, 'rb').read()).hexdigest() == sha)
+    vurl = BASE + 'verify/?id=' + rid + '&v=1.0'
+    pg.goto(vurl); pg.wait_for_selector('.c6-vstatus')
+    ok('Verify page: record found but not compared → NOT VERIFIED', pg.inner_text('.c6-vstatus__v') == 'NOT VERIFIED' and 'LOCAL DEMO REGISTRY' in pg.inner_text('#result'))
+    pg.fill('#d-hash', sha); pg.click('#doc button[type=submit]'); pg.wait_for_timeout(300)
+    ok('Verify page: matching SHA-256 → VERIFIED', pg.inner_text('.c6-vstatus__v') == 'VERIFIED')
+    pg.fill('#d-hash', ('0' if sha[0] != '0' else '1') + sha[1:]); pg.click('#doc button[type=submit]'); pg.wait_for_timeout(300)
+    ok('Verify page: wrong SHA-256 → INVALID', pg.inner_text('.c6-vstatus__v') == 'INVALID')
+    pg.set_input_files('#d-file', man); pg.click('#doc button[type=submit]'); pg.wait_for_timeout(500)
+    ok('Verify page: uploaded manifest → VERIFIED', pg.inner_text('.c6-vstatus__v') == 'VERIFIED')
+    pg.goto(BASE + 'verify/?id=REP-20000101-ZZZZZ'); pg.wait_for_selector('.c6-vstatus')
+    ok('Verify page: unknown ID → NOT FOUND', pg.inner_text('.c6-vstatus__v') == 'NOT FOUND')
+    pg.goto(BASE + 'app/reports.html?type=combined'); settle(pg)
+    pg.locator('#reg [data-r="version"]').first.click(); pg.locator('dialog[open] button.c6-btn--primary, dialog[open] [data-yes]').last.click(); pg.wait_for_timeout(1200)
+    vers = pg.evaluate("[...document.querySelectorAll('#reg tbody tr')].map(r => r.cells[0].textContent + ' ' + r.cells[1].textContent + ' ' + r.cells[7].textContent)")
+    ok('New version keeps Report ID, v2.0 ACTIVE, v1.0 SUPERSEDED', any((rid + ' 2.0') in v and 'ACTIVE' in v for v in vers) and any((rid + ' 1.0') in v and 'SUPERSEDED' in v for v in vers), vers)
+    pg.goto(vurl); pg.wait_for_selector('.c6-vstatus'); pg.fill('#d-hash', sha); pg.click('#doc button[type=submit]'); pg.wait_for_timeout(300)
+    ok('Verify page: old version with correct hash → SUPERSEDED (not VERIFIED)', pg.inner_text('.c6-vstatus__v') == 'SUPERSEDED')
+    ok('No errors in formal report flows', not errs, errs[:3])
     ctx.close()
     # ---------- 7b. methodology data supplied by the project ----------
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})

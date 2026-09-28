@@ -16,7 +16,7 @@ const load = f => vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'
   'js/calculations/rng.js', 'js/calculations/distributions.js', 'js/calculations/stats.js', 'js/calculations/riskMatrixEngine.js', 'js/calculations/nistRiskEngine.js', 'js/calculations/cisRamEngine.js',
   'js/calculations/cisControlsEngine.js', 'js/calculations/csfEngine.js', 'js/calculations/treatmentEngine.js', 'js/calculations/isoReadinessEngine.js', 'js/calculations/fairMonteCarloEngine.js',
   'js/services/workspace.js', 'js/services/xlsx.js', 'js/services/exportService.js', 'js/services/csvImportService.js', 'js/services/importCenter.js',
-  'js/services/fairAnalysisService.js', 'js/charts/svg.js', 'js/charts/reportCharts.js', 'js/services/reportBuilder.js', 'js/services/reportRenderer.js'
+  'js/services/fairAnalysisService.js', 'js/charts/svg.js', 'js/charts/reportCharts.js', 'js/services/reportBuilder.js', 'js/services/qr.js', 'js/services/reportIntegrity.js', 'js/services/reportRenderer.js'
 ].forEach(load);
 const C = globalThis.CAT6;
 let pass = 0, fail = 0;
@@ -214,6 +214,64 @@ t('Reports list defaults with basis', RR.render(RB.build('combined', data, {})).
     t('FAIR detail follows the selected run', rep2.fairRunId === 'RUN-B1' && RR.render(rep2).includes('情境詳細：RS-B'));
     t('FAIR selected run unknown → falls back to newest', RB.build('fair', dd, { fairRunId: 'NOPE' }).fairRunId === 'RUN-A2');
     t('FAIR summary exported to CSV/XLSX tables', RB.toTables(rep).some(x => /FAIR 情境彙總/.test(x.name) && x.rows.length === 2));
+  }
+
+  // ---- Formal report: identity, classification, Report ID / UUID, canonical SHA-256, registry, verification
+  {
+    const RB = C.services.reportBuilder, RR = C.services.reportRenderer, RI = C.services.reportIntegrity;
+    C.config.reportSecurity = Object.assign({}, C.config.reportSecurity, { verifyBaseUrl: 'https://example.test/CAT.6/verify/' });
+    const ids = new Set(); const reg = []; for (let i = 0; i < 3000; i++) { const id = RI.newReportId(reg); t.ok = true; ids.add(id); reg.push({ reportId: id }); }
+    t('Report ID format REP-YYYYMMDD-XXXXX and unique (3,000 draws)', ids.size === 3000 && [...ids].every(x => /^REP-\d{8}-[0-9A-HJKMNP-TV-Z]{5}$/.test(x)));
+    const uu = new Set(Array.from({ length: 2000 }, () => RI.uuid()));
+    t('UUID v4 unique (2,000 draws)', uu.size === 2000 && [...uu].every(u => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(u)));
+    t('Canonical JSON: key order independent', RI.canonicalize({ b: 1, a: [2, { d: 3, c: 'x' }] }) === RI.canonicalize({ a: [2, { c: 'x', d: 3 }], b: 1 }));
+    t('SHA-256 known vector ("abc")', (await RI.sha256Hex('abc')) === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    const dd = Object.assign({ assessment: W.assessment }, await W.load(RB.COLLECTIONS));
+    const draft = RB.build('combined', dd, {}); draft.classification = 'INTERNAL ONLY';
+    const dh = RR.render(draft);
+    t('Draft: DRAFT marking, no Report ID / hash', dh.includes('DRAFT — NOT FINALIZED') && !/REP-\d{8}-/.test(dh) && dh.includes('INTERNAL ONLY'));
+    const rec = await RI.finalize({ report: RB.build('combined', dd, {}), classification: 'CONFIDENTIAL', generatedBy: 'QA', now: '2026-09-28T07:51:00Z' });
+    t('Finalize: record has ID, UUID, v1.0, classification, generatedAt', /^REP-20260928-/.test(rec.reportId) && rec.reportUuid && rec.reportVersion === '1.0' && rec.classification === 'CONFIDENTIAL' && rec.generatedAt === '2026-09-28T07:51:00.000Z');
+    t('Finalize: SHA-256 reproducible from the canonical artifact', (await RI.sha256Hex(rec.canonical)) === rec.sha256 && JSON.parse(rec.canonical).meta.reportId === rec.reportId);
+    t('Hash scope excludes the verification page (no write-back loop)', !rec.canonical.includes(rec.sha256) && !JSON.parse(rec.canonical).sections.some(s => s.id === 'verification'));
+    t('No signature / TSA backend → honest statuses', rec.signature.status === 'NOT_SIGNED' && rec.timestamp.status === 'TSA_NOT_CONNECTED' && /DEMO \/ TSA NOT CONNECTED/.test(rec.timestamp.label));
+    const fr = RI.reportFromRecord(rec), fh = RR.render(fr);
+    t('Finalized render: identity block, classification, QR, SHA-256, visual seal disclaimer', fh.includes(rec.reportId) && fh.includes('CONFIDENTIAL') && fh.includes('class="c6r-qr"') && fh.includes(rec.sha256) && fh.includes('DEMO / VISUAL SEAL ONLY') && fh.includes('不是數位簽章'));
+    t('Finalized render: verification URL points at this report', fh.includes('https://example.test/CAT.6/verify/?id=' + rec.reportId + '&amp;v=1.0'));
+    const again = await RI.sha256Hex(RI.canonicalize(RI.artifact(fr, fr.meta)));
+    t('Re-download from record → same Report ID and identical SHA-256', again === rec.sha256 && RR.render(RI.reportFromRecord(rec)) === fh);
+    const css = RR.pageCss(fr);
+    t('Header / footer: classification + Report ID + Page X of Y', /counter\(page\) " of " counter\(pages\)/.test(css) && css.includes(rec.reportId) && css.includes('"CONFIDENTIAL · ' + rec.reportId));
+    const pub = RB.build('fair', dd, {}); pub.classification = 'PUBLIC';
+    t('PUBLIC classification shown as PUBLIC', RR.pageCss(pub).includes('"PUBLIC ·'));
+    t('Disclaimer, boundary, data validity, dynamic copyright', fh.includes('Methodology Boundary') && fh.includes('Data Validity') && fh.includes('© 2026 CAT.6 Cybersecurity. All rights reserved.') && fh.includes('CAT.6 Integrated Mapping'));
+    // verification states
+    let ev = await RI.evaluate(rec, rec, null);
+    t('Verify: record found but document not compared → NOT VERIFIED (never auto VERIFIED)', ev.status === 'NOT VERIFIED');
+    ev = await RI.evaluate(rec, rec, { sha256: rec.sha256.toUpperCase() });
+    t('Verify: matching SHA-256 → VERIFIED', ev.status === 'VERIFIED');
+    ev = await RI.evaluate(rec, rec, { canonical: rec.canonical });
+    t('Verify: matching manifest (re-hashed) → VERIFIED', ev.status === 'VERIFIED');
+    ev = await RI.evaluate(rec, rec, { canonical: rec.canonical.replace('"CONFIDENTIAL"', '"PUBLIC"') });
+    t('Verify: tampered manifest → INVALID', ev.status === 'INVALID');
+    ev = await RI.evaluate(Object.assign({}, rec, { canonical: rec.canonical.replace('QA', 'XX') }), rec, { sha256: rec.sha256 });
+    t('Verify: tampered registry record → INVALID', ev.status === 'INVALID');
+    ev = await RI.evaluate(null, null, null);
+    t('Verify: unknown ID → NOT FOUND', ev.status === 'NOT FOUND');
+    const v2 = await RI.finalize({ report: RB.build('combined', dd, {}), classification: 'CONFIDENTIAL', previous: rec });
+    const regl = await RI.list(), old = regl.find(r => r.reportUuid === rec.reportUuid);
+    t('New version: same Report ID, v2.0, new UUID, old version SUPERSEDED', v2.reportId === rec.reportId && v2.reportVersion === '2.0' && v2.reportUuid !== rec.reportUuid && old.status === 'SUPERSEDED' && old.supersededBy === v2.reportUuid);
+    ev = await RI.evaluate(old, v2, { sha256: old.sha256 });
+    t('Verify: superseded version → SUPERSEDED', ev.status === 'SUPERSEDED');
+    await RI.revoke(v2, 'test');
+    const rv = (await RI.list()).find(r => r.reportUuid === v2.reportUuid);
+    t('Verify: revoked → REVOKED', (await RI.evaluate(rv, rv, { sha256: rv.sha256 })).status === 'REVOKED');
+    // security: no key material in the shipped code
+    const files = [].concat(...['js', 'data', 'app', 'verify'].map(dir => (function walk(d) { return fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]); })(path.join(ROOT, dir)))).concat([path.join(ROOT, 'index.html')]);
+    const bad = files.filter(f => /-----BEGIN [A-Z ]*PRIVATE KEY-----|"role"\s*:\s*"service_role"|service_role"|signingSecret|privateKey\s*[:=]\s*['"][^'"]+/.test(fs.readFileSync(f, 'utf8')));
+    t('No private key / service_role / signing secret in shipped files', bad.length === 0, bad.join(', '));
+    const jwt = (C.config.supabase.anonKey || '').split('.')[1];
+    t('Configured Supabase key is the anon role', !jwt || JSON.parse(Buffer.from(jwt, 'base64').toString()).role === 'anon');
   }
 
   // ---- Worker ⇄ main thread determinism: execute js/workers/fair.worker.js in a worker-like sandbox
