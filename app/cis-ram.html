@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* Before first paint: theme class + initial sidebar view (no layout jump). Breakpoints match js/ui/shell.js. */(function(d){d.classList.add("c6-doc");var w=window.innerWidth,p=null;try{p=localStorage.getItem("cat6:ui:side")}catch(e){}d.setAttribute("data-side-view",w>=1200?(p==="collapsed"?"rail":"full"):w>=768?"rail":"hidden")})(document.documentElement)</script>
 <title>CIS RAM · CAT.6 Cybersecurity</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/css/tokens.css?v=20260928b">
-<link rel="stylesheet" href="../assets/css/foundation.css?v=20260928b">
-<link rel="stylesheet" href="../assets/css/app-shell.css?v=20260928b">
-<link rel="stylesheet" href="../assets/css/dashboard.css?v=20260928b">
-<link rel="stylesheet" href="../assets/css/components.css?v=20260928b">
+<link rel="stylesheet" href="../assets/css/tokens.css?v=20260928c">
+<link rel="stylesheet" href="../assets/css/foundation.css?v=20260928c">
+<link rel="stylesheet" href="../assets/css/app-shell.css?v=20260928c">
+<link rel="stylesheet" href="../assets/css/dashboard.css?v=20260928c">
+<link rel="stylesheet" href="../assets/css/components.css?v=20260928c">
 </head>
 <body>
 <div class="c6-root c6-app">
@@ -36,53 +37,53 @@
   </div>
 </div>
 
-<script src="../js/core/namespace.js?v=20260928b"></script>
-<script src="../js/config.js?v=20260928b"></script>
-<script src="../js/core/format.js?v=20260928b"></script>
-<script src="../js/core/provenance.js?v=20260928b"></script>
-<script src="../js/core/dom.js?v=20260928b"></script>
-<script src="../js/core/repository.js?v=20260928b"></script>
-<script src="../data/risk-criteria.js?v=20260928b"></script>
-<script src="../data/frameworks.js?v=20260928b"></script>
-<script src="../data/references.js?v=20260928b"></script>
-<script src="../data/nist-likelihood.js?v=20260928b"></script>
-<script src="../data/catalog/iso27001.js?v=20260928b"></script>
-<script src="../data/catalog/csf2.js?v=20260928b"></script>
-<script src="../data/catalog/cis-controls.js?v=20260928b"></script>
-<script src="../data/catalog/nist-impact-risk.js?v=20260928b"></script>
-<script src="../data/catalog/framework-library.js?v=20260928b"></script>
-<script src="../data/catalog/framework-mapping.js?v=20260928b"></script>
-<script src="../data/defaults/meta.js?v=20260928b"></script>
-<script src="../data/defaults/workspace-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/risk-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/nist-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/cis-ram-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/cis-controls-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/nist-csf-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/iso-readiness-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/fair-defaults.js?v=20260928b"></script>
-<script src="../data/defaults/parameters.js?v=20260928b"></script>
-<script src="../js/calculations/rng.js?v=20260928b"></script>
-<script src="../js/calculations/distributions.js?v=20260928b"></script>
-<script src="../js/calculations/stats.js?v=20260928b"></script>
-<script src="../js/calculations/riskMatrixEngine.js?v=20260928b"></script>
-<script src="../js/calculations/nistRiskEngine.js?v=20260928b"></script>
-<script src="../js/calculations/cisRamEngine.js?v=20260928b"></script>
-<script src="../js/calculations/cisControlsEngine.js?v=20260928b"></script>
-<script src="../js/calculations/csfEngine.js?v=20260928b"></script>
-<script src="../js/calculations/treatmentEngine.js?v=20260928b"></script>
-<script src="../js/calculations/isoReadinessEngine.js?v=20260928b"></script>
-<script src="../js/calculations/fairMonteCarloEngine.js?v=20260928b"></script>
-<script src="../js/services/workspace.js?v=20260928b"></script>
-<script src="../js/services/xlsx.js?v=20260928b"></script>
-<script src="../js/services/exportService.js?v=20260928b"></script>
-<script src="../js/charts/svg.js?v=20260928b"></script>
-<script src="../js/charts/hbars.js?v=20260928b"></script>
-<script src="../js/ui/icons.js?v=20260928b"></script>
-<script src="../js/ui/shell.js?v=20260928b"></script>
-<script src="../js/ui/table.js?v=20260928b"></script>
-<script src="../js/ui/form.js?v=20260928b"></script>
-<script src="../js/ui/page.js?v=20260928b"></script>
-<script src="../js/pages/cis-ram.js?v=20260928b"></script>
+<script src="../js/core/namespace.js?v=20260928c"></script>
+<script src="../js/config.js?v=20260928c"></script>
+<script src="../js/core/format.js?v=20260928c"></script>
+<script src="../js/core/provenance.js?v=20260928c"></script>
+<script src="../js/core/dom.js?v=20260928c"></script>
+<script src="../js/core/repository.js?v=20260928c"></script>
+<script src="../data/risk-criteria.js?v=20260928c"></script>
+<script src="../data/frameworks.js?v=20260928c"></script>
+<script src="../data/references.js?v=20260928c"></script>
+<script src="../data/nist-likelihood.js?v=20260928c"></script>
+<script src="../data/catalog/iso27001.js?v=20260928c"></script>
+<script src="../data/catalog/csf2.js?v=20260928c"></script>
+<script src="../data/catalog/cis-controls.js?v=20260928c"></script>
+<script src="../data/catalog/nist-impact-risk.js?v=20260928c"></script>
+<script src="../data/catalog/framework-library.js?v=20260928c"></script>
+<script src="../data/catalog/framework-mapping.js?v=20260928c"></script>
+<script src="../data/defaults/meta.js?v=20260928c"></script>
+<script src="../data/defaults/workspace-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/risk-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/nist-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/cis-ram-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/cis-controls-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/nist-csf-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/iso-readiness-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/fair-defaults.js?v=20260928c"></script>
+<script src="../data/defaults/parameters.js?v=20260928c"></script>
+<script src="../js/calculations/rng.js?v=20260928c"></script>
+<script src="../js/calculations/distributions.js?v=20260928c"></script>
+<script src="../js/calculations/stats.js?v=20260928c"></script>
+<script src="../js/calculations/riskMatrixEngine.js?v=20260928c"></script>
+<script src="../js/calculations/nistRiskEngine.js?v=20260928c"></script>
+<script src="../js/calculations/cisRamEngine.js?v=20260928c"></script>
+<script src="../js/calculations/cisControlsEngine.js?v=20260928c"></script>
+<script src="../js/calculations/csfEngine.js?v=20260928c"></script>
+<script src="../js/calculations/treatmentEngine.js?v=20260928c"></script>
+<script src="../js/calculations/isoReadinessEngine.js?v=20260928c"></script>
+<script src="../js/calculations/fairMonteCarloEngine.js?v=20260928c"></script>
+<script src="../js/services/workspace.js?v=20260928c"></script>
+<script src="../js/services/xlsx.js?v=20260928c"></script>
+<script src="../js/services/exportService.js?v=20260928c"></script>
+<script src="../js/charts/svg.js?v=20260928c"></script>
+<script src="../js/charts/hbars.js?v=20260928c"></script>
+<script src="../js/ui/icons.js?v=20260928c"></script>
+<script src="../js/ui/shell.js?v=20260928c"></script>
+<script src="../js/ui/table.js?v=20260928c"></script>
+<script src="../js/ui/form.js?v=20260928c"></script>
+<script src="../js/ui/page.js?v=20260928c"></script>
+<script src="../js/pages/cis-ram.js?v=20260928c"></script>
 </body>
 </html>
