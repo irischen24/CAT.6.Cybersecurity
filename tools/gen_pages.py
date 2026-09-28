@@ -1,18 +1,18 @@
 # Generates the static app/*.html shells (GitHub Pages friendly, relative paths only).
 import os
 ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-CORE=['js/core/namespace.js','js/config.js','js/core/format.js','js/core/provenance.js','js/core/dom.js','js/core/repository.js',
+CORE=['js/core/namespace.js','js/config.js','js/core/format.js','js/core/provenance.js','js/core/dom.js','js/core/normalize.js','js/core/repository.js',
  'data/risk-criteria.js','data/frameworks.js','data/references.js','data/nist-likelihood.js',
  'data/catalog/iso27001.js','data/catalog/csf2.js','data/catalog/cis-controls.js','data/catalog/nist-impact-risk.js','data/catalog/framework-library.js','data/catalog/framework-mapping.js',
  'data/defaults/meta.js','data/defaults/workspace-defaults.js','data/defaults/risk-defaults.js','data/defaults/nist-defaults.js','data/defaults/cis-ram-defaults.js',
- 'data/defaults/cis-controls-defaults.js','data/defaults/nist-csf-defaults.js','data/defaults/iso-readiness-defaults.js','data/defaults/fair-defaults.js','data/defaults/parameters.js',
+ 'data/defaults/cis-controls-defaults.js','data/defaults/nist-csf-defaults.js','data/defaults/iso-readiness-defaults.js','data/defaults/fair-defaults.js','data/defaults/parameters.js','js/services/fairScenarios.js',
  'js/calculations/rng.js','js/calculations/distributions.js','js/calculations/stats.js','js/calculations/riskMatrixEngine.js','js/calculations/nistRiskEngine.js','js/calculations/cisRamEngine.js',
  'js/calculations/cisControlsEngine.js','js/calculations/csfEngine.js','js/calculations/treatmentEngine.js','js/calculations/isoReadinessEngine.js','js/calculations/fairMonteCarloEngine.js',
  'js/services/workspace.js','js/services/xlsx.js','js/services/exportService.js',
  'js/charts/svg.js','js/charts/hbars.js','js/ui/icons.js','data/brand.js','js/ui/brand.js','js/ui/shell.js','js/ui/table.js','js/ui/form.js','js/ui/page.js']
 PAGES=[
  # file, title, ctx, extra css, extra js, page js
- ('dashboard','Dashboard','組織目前的資安風險態勢',['dashboard'],['js/charts/barChart.js','js/charts/lineChart.js','js/charts/riskMatrix.js','js/charts/gauge.js'],'dashboard'),
+ ('dashboard','Dashboard','組織目前的資安風險態勢',['dashboard'],['js/charts/barChart.js','js/charts/lineChart.js','js/charts/riskMatrix.js','js/charts/gauge.js','js/charts/reportCharts.js','js/services/reportIntegrity.js','js/services/dashboardModel.js','js/services/dashboardPdf.js'],'dashboard'),
  ('risk-assessment','Risk Assessment','Assessment Setup · Workflow 01',[],[],'risk-assessment'),
  ('risk-register','Risk Register','風險登錄表',[],[],'risk-register'),
  ('nist-800-30','NIST SP 800-30','Threat · Vulnerability · Likelihood · Impact · Risk',[],[],'nist-800-30'),
