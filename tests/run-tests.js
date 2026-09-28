@@ -197,6 +197,25 @@ t('Reports list defaults with basis', RR.render(RB.build('combined', data, {})).
   const r3 = await C.services.fair.run(inputs, { iterations: 10000, seed: 42 });
   t('Seed is reproducible', r2.summaries.AnnualRisk.P50 === r3.summaries.AnnualRisk.P50);
 
+  // ---- FAIR report: multi-scenario summary + selectable detail run
+  {
+    const RB = C.services.reportBuilder, RR = C.services.reportRenderer;
+    const base = { iterations: 10000, seed: 42, summaries: r2.summaries, histogram: r2.histogram, exceedance: r2.exceedance, inputs: [], defaultsUsed: false, engine: 'main' };
+    const big = JSON.parse(JSON.stringify(r2.summaries)); Object.keys(big.AnnualRisk).forEach(k => big.AnnualRisk[k] *= 2);
+    const runs = [Object.assign({}, base, { id: 'RUN-A1', riskId: 'RS-A', at: '2026-09-01T00:00:00Z' }), Object.assign({}, base, { id: 'RUN-B1', riskId: 'RS-B', at: '2026-09-02T00:00:00Z', summaries: big }),
+      Object.assign({}, base, { id: 'RUN-A2', riskId: 'RS-A', at: '2026-09-03T00:00:00Z' })];
+    const dd = Object.assign({ assessment: W.assessment }, await W.load(RB.COLLECTIONS), { fairRuns: runs });
+    const per = RB.latestPerRisk(dd);
+    t('FAIR summary: one row per scenario, latest run each, sorted by ALE', per.length === 2 && per[0].id === 'RUN-B1' && per[1].id === 'RUN-A2');
+    const rep = RB.build('fair', dd, {}), h = RR.render(rep);
+    t('FAIR report lists every scenario with Mean/P50/P90/P95 + comparison chart', h.includes('FAIR 情境彙總') && h.includes('RUN-B1') && h.includes('RUN-A2') && !h.includes('RUN-A1') && h.includes('各情境年化風險比較') && h.includes('P95'));
+    t('FAIR detail defaults to newest run', rep.fairRunId === 'RUN-A2' && h.includes('情境詳細：RS-A'));
+    const rep2 = RB.build('fair', dd, { fairRunId: 'RUN-B1' });
+    t('FAIR detail follows the selected run', rep2.fairRunId === 'RUN-B1' && RR.render(rep2).includes('情境詳細：RS-B'));
+    t('FAIR selected run unknown → falls back to newest', RB.build('fair', dd, { fairRunId: 'NOPE' }).fairRunId === 'RUN-A2');
+    t('FAIR summary exported to CSV/XLSX tables', RB.toTables(rep).some(x => /FAIR 情境彙總/.test(x.name) && x.rows.length === 2));
+  }
+
   // ---- Worker ⇄ main thread determinism: execute js/workers/fair.worker.js in a worker-like sandbox
   const workerResult = await new Promise((resolve, reject) => {
     const sandbox = { console };
