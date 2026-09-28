@@ -3,6 +3,8 @@
  * LocalRepository  → localStorage (falls back to in-memory if storage is blocked)
  * SupabaseRepository → PostgREST on table cat6_records (see supabase/schema.sql), RLS by organization. */
 (function (C) {
+  /* Accept either the project URL or the REST URL (…/rest/v1/). */
+  function root(u) { return String(u || '').replace(/\/+$/, '').replace(/\/rest\/v1$/, ''); }
   function key(r) { return (r.assessmentId || '') + '\u0000' + r.id; }
   function LocalRepository(prefix) {
     var mem = {}, ok = true;
@@ -43,7 +45,7 @@
   }
 
   function SupabaseRepository(cfg, token) {
-    var base = cfg.url.replace(/\/+$/, '') + '/rest/v1/cat6_records', org = cfg.organizationId;
+    var base = root(cfg.url) + '/rest/v1/cat6_records', org = cfg.organizationId;
     function headers(extra) { return Object.assign({ apikey: cfg.anonKey, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, extra || {}); }
     function check(r) { if (!r.ok) return r.text().then(function (t) { throw new Error('Supabase ' + r.status + ': ' + t); }); return r; }
     function q(col, id, asId) { return '?organization_id=eq.' + encodeURIComponent(org) + '&collection=eq.' + encodeURIComponent(col) + (id ? '&id=eq.' + encodeURIComponent(id) : '') + (asId !== undefined ? '&assessment_id=eq.' + encodeURIComponent(asId || '') : ''); }
@@ -69,7 +71,7 @@
   function session() { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
   function signIn(email, password) {
     var sb = C.config.supabase;
-    return fetch(sb.url.replace(/\/+$/, '') + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password }) })
+    return fetch(root(sb.url) + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password }) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error_description || j.msg || ('HTTP ' + r.status)); return j; }); })
       .then(function (j) { var s = { token: j.access_token, email: email, expiresAt: Date.now() + (j.expires_in || 3600) * 1000 }; sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); return s; });
   }
