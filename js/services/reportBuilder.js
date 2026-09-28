@@ -23,11 +23,11 @@
   /* Section order is fixed; each report type picks which optional sections it carries. Core sections appear in every report. */
   var ORDER = ['cover', 'summary', 'scope', 'methodology', 'sources', 'assumptions', 'provenance', 'overview', 'matrix', 'register',
     'framework', 'fair', 'treatment', 'residual', 'iso', 'recommendations', 'references', 'disclaimer'];
-  var TITLES = { cover: 'Cover', summary: 'Executive Summary 執行摘要', scope: 'Assessment Scope 評估範圍', methodology: 'Methodology 方法論',
+  var TITLES = { verification: 'Report Verification 報告驗證', cover: 'Cover', summary: 'Executive Summary 執行摘要', scope: 'Assessment Scope 評估範圍', methodology: 'Methodology 方法論',
     sources: 'Data Sources 資料來源', assumptions: 'Assumptions 假設', provenance: 'Data Provenance 資料來源標示', overview: 'Risk Overview 風險概況',
     matrix: 'Risk Matrix 風險矩陣', register: 'Risk Register 風險登錄表', framework: 'Framework Analysis 框架分析', fair: 'FAIR Results 量化結果',
     treatment: 'Risk Treatment 風險處理', residual: 'Residual Risk 殘餘風險', iso: 'ISO/IEC 27001 Readiness 驗證準備度',
-    recommendations: 'Recommendations 建議', references: 'References 參考文獻', disclaimer: 'Disclaimer 免責聲明' };
+    recommendations: 'Recommendations 建議', references: 'References 參考文獻', disclaimer: 'Disclaimer, Methodology Boundary & Copyright 免責聲明與版權' };
   var FW_REF = { ISO27001: 'iso27001', CSF2: 'csf2', SP80030: 'sp80030', CISRAM: 'cisram', CISV81: 'cisv81', FAIR: 'fair' };
   var TYPE_FW = { executive: null, 'cat6-risk': null, combined: null, nist: ['SP80030'], cisram: ['CISRAM', 'CISV81'], fair: ['FAIR'],
     mapping: null, 'iso-gap': ['ISO27001'], 'iso-readiness': ['ISO27001'] };
@@ -90,11 +90,12 @@
 
   /* ---------- section builders ---------- */
   var B = {};
+  /* Organization, assessment, report type, Report ID, version, classification and generation data are printed by the
+   * renderer's Document Identity Block (from the frozen metadata); the cover section keeps the assessment context. */
   B.cover = function (ctx) {
     var a = ctx.a;
-    return [kv([['Organization 組織', a.organization || DR], ['Assessment 評估', a.name || DR], ['Report 報告', ctx.info.en + ' · ' + ctx.info.zh],
-      ['Assessment Date 評估日期', a.date || DR], ['Assessor 評估者', a.assessor || DR], ['Generated 產生時間', ctx.generatedAt.replace('T', ' ').slice(0, 16)],
-      ['Data Source 資料來源', a.dataSource || DR]])].concat(ctx.defaults ? [callout(DEFAULT_SENTENCE + ' 標示 CAT6_DEFAULT 的數值為示範 / 假設值，不代表組織實際狀況。', 'warn')] : []);
+    return [kv([['Assessment Date 評估日期', a.date || DR], ['Assessor 評估者', a.assessor || DR], ['Scope 範圍', a.scope || DR], ['Data Source 資料來源', a.dataSource || DR]])]
+      .concat(ctx.defaults ? [callout(DEFAULT_SENTENCE + ' 標示 CAT6_DEFAULT 的數值為示範 / 假設值，不代表組織實際狀況。', 'warn')] : []);
   };
   B.summary = function (ctx) {
     var rows = ctx.risks, c = sevCounts(rows), tr = C.calc.treatment.summary(ctx.d.treatments || [], ctx.today), out = [];
@@ -282,8 +283,8 @@
     return out;
   }
   function fwMapping(ctx) {
-    var M = C.data.mapping, out = [{ kind: 'h', text: 'Framework Mapping' }];
-    out.push(table('CAT.6 整合框架模型（領域 → 框架）', [{ key: 'domain', label: 'Domain' }, { key: 'zh', label: '中文' }, { key: 'fw', label: 'Frameworks', wrap: true }],
+    var M = C.data.mapping, out = [{ kind: 'h', text: 'Framework Mapping — CAT.6 Integrated Mapping' }, p('以下對應為 CAT.6 Integrated Mapping（CAT.6 自行建立之整合模型），非各框架官方對照表。')];
+    out.push(table('CAT.6 Integrated Mapping：領域 → 框架', [{ key: 'domain', label: 'Domain' }, { key: 'zh', label: '中文' }, { key: 'fw', label: 'Frameworks', wrap: true }],
       M.domains.map(function (dm) { return { domain: dm.en, zh: dm.zh, fw: dm.fw.map(fwName).join('、') }; })));
     var tr = ctx.d.treatments || [];
     out.push(table('風險情境對應（框架 / 控制 / 處理對應）', [{ key: 'id', label: 'Risk' }, { key: 'scenario', label: 'Scenario', wrap: true }, { key: 'frameworks', label: 'Frameworks', wrap: true }, { key: 'cis', label: 'CIS Controls' },
@@ -435,9 +436,26 @@
     return [list(C.data.references.filter(function (r) { return ids.indexOf(r.id) >= 0; }).map(function (r) { return r.title + ' — ' + r.url; }).concat(['CAT.6 Risk_Criteria.pdf（5×5 平台準則、NIST G-2 / G-3 / G-4 / G-5）']))];
   };
   B.disclaimer = function (ctx) {
-    return [p('本報告由 CAT.6 Cybersecurity 依使用者提供、匯入或 CAT.6 預設之資料計算產生，僅供風險管理決策參考。CAT.6 5×5 準則、CSF 0–4 尺度與 CAT.6 Readiness Indicator 為平台自定義方法，並非 ISO、NIST、CIS 或 FAIR 官方評分。'),
-      p('CAT.6 不是 ISO/IEC 27001 驗證機構，不提供驗證、不核發證書，亦不預測驗證結果。框架要求本文請參閱各標準正式文本。')]
-      .concat(ctx.defaults ? [callout(DEFAULT_SENTENCE + ' 標示 CAT6_DEFAULT 的值不代表組織實際狀況。', 'warn')] : []);
+    var year = new Date(ctx.generatedAt).getFullYear() || new Date().getFullYear(), a = ctx.a;
+    return [
+      { kind: 'h', text: 'Disclaimer 免責聲明' },
+      list([
+        '本報告結果依據組織輸入資料（USER_INPUT）、檔案匯入資料（FILE_IMPORT）、CAT.6 預設 / 假設值（CAT6_DEFAULT）與報告產生時間點之資料計算（CALCULATED）而得。',
+        '凡使用 CAT.6 DEFAULT / ASSUMED VALUE 之處，均已於封面、假設章節、資料來源表與各表格的來源欄明確揭露' + (ctx.defaults ? '；本報告含有此類數值。' : '；本報告未使用預設值。'),
+        '評估結果僅反映報告所載 Scope（' + (a.scope || DR) + '）與 Assessment Date（' + (a.date || DR) + '）當時之狀態。',
+        '本報告不代表 ISO/IEC、NIST、CIS、The Open Group（FAIR）或任何標準組織之官方認證、驗證或背書。',
+        'ISO/IEC 27001 Readiness（CAT.6 Readiness Indicator）不等同正式 ISO/IEC 27001 Certification Audit；CAT.6 不是驗證機構，不核發證書，亦不預測驗證結果。',
+        'FAIR 蒙地卡羅模擬為風險量化分析，呈現損失的機率分布，不應表述為確定會發生的財務損失。',
+        'Framework Mapping 為 CAT.6 Integrated Mapping（CAT.6 自行建立之整合模型），非各框架官方對照表。',
+        '本報告不得超出原始 Assessment Scope 解讀或引用。'
+      ]),
+      { kind: 'h', text: 'Methodology Boundary 方法論邊界' },
+      p('CAT.6 5×5 半定量矩陣、CSF 2.0 Readiness Index（0–3）、CIS RAM 門檻預設值與 CAT.6 Readiness Indicator 為平台自訂方法；NIST SP 800-30 之 G-5 為查表、風險分數為平台 5×5 計分。各方法之依據與預設值見「方法論」與「假設」章節。'),
+      { kind: 'h', text: 'Data Validity 資料有效性' },
+      p('資料之正確性與完整性由提供資料之組織負責。報告定稿後內容即凍結（以 SHA-256 保護）；其後任何資料異動不會改變本報告，須建立新版本（Report Version）。'),
+      { kind: 'h', text: 'Copyright 版權' },
+      p('© ' + year + ' CAT.6 Cybersecurity. All rights reserved.')
+    ].concat(ctx.defaults ? [callout(DEFAULT_SENTENCE + ' 標示 CAT6_DEFAULT 的值不代表組織實際狀況。', 'warn')] : []);
   };
 
   /* Which sections a report type carries (core sections are always present). */

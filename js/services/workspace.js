@@ -3,7 +3,7 @@
  * on first visit, keeps an activity log and quarterly register snapshots. */
 (function (C) {
   var META = '__meta';
-  var GLOBAL = { assessments: 1 };
+  var GLOBAL = { assessments: 1, reportRegistry: 1 };   /* report registry is organization-wide */
   var COLS = ['risks', 'treatments', 'nist', 'cisram', 'cisControls', 'cisSafeguards', 'csf', 'isoContext', 'isoClauses', 'isoSoa', 'isoTasks',
     'audits', 'findings', 'capas', 'reviews', 'evidence', 'fairInputs', 'fairRuns', 'snapshots', 'activity', 'importLog'];
   var W = { repo: null, mode: 'local', reason: '', meta: null, assessment: null, COLS: COLS };
