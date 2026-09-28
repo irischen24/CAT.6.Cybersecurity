@@ -101,6 +101,10 @@
 .c6r-seal p { margin: 0; }
 @media (max-width: 640px) { .c6r-kv--id, .c6r-grid2 { grid-template-columns: 1fr; } .c6r-verify { grid-template-columns: 1fr; } }
 
+/* Page break before each FAIR detailed scenario (print only). */
+.c6r-pb { height: 0; }
+@media screen { .c6r-pb { border-top: 1px dashed #D6D1F5; margin: 6mm 0; } }
+
 /* ---------- Print ---------- */
 .c6-print-root { display: none; }
 @media print {
@@ -108,6 +112,7 @@
   body > .c6-root, .c6-toast, .c6-modal, .c6-dialog { display: none !important; }
   .c6-print-root { display: block !important; }
   .c6r { font-size: 9.5pt; }
+  .c6r-pb { break-before: page; page-break-before: always; }
   .c6r-cover { break-after: page; page-break-after: always; min-height: 230mm; }
   .c6r-sec { break-before: auto; }
   .c6r-sec--register, .c6r-sec--framework, .c6r-sec--treatment, .c6r-sec--iso, .c6r-sec--fair, .c6r-sec--verification { break-before: page; page-break-before: always; }
