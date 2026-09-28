@@ -69,7 +69,7 @@
   function boot(opts, fn) {
     C.ui.shell.init(opts.nav);
     if (opts.group) subnav(document.getElementById('c6-subnav'), GROUPS[opts.group], opts.nav);
-    return C.services.workspace.init().then(function (W) { context(W); return fn(W); }).catch(function (err) {
+    return C.services.workspace.init().then(function () { var W = C.services.workspace; context(W); return fn(W); }).catch(function (err) {
       console.error(err);
       var m = document.getElementById('main');
       if (m) m.insertAdjacentHTML('afterbegin', '<div class="c6-alert" role="alert"><strong>無法載入資料：</strong>' + esc(err.message) + '</div>');
