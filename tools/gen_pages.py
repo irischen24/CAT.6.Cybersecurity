@@ -28,7 +28,7 @@ PAGES=[
  ('evidence','Evidence Management','證據管理',[],[],'evidence'),
  ('risk-treatment','Risk Treatment','處理計畫 · 殘餘風險',[],[],'risk-treatment'),
  ('data-import','Data Import','CSV / XLSX Import Center',[],['js/services/csvImportService.js','js/services/importCenter.js'],'data-import'),
- ('reports','Reports','Report Center · PDF / CSV / XLSX',['report'],['js/charts/reportCharts.js','js/services/reportBuilder.js','js/services/reportRenderer.js'],'reports'),
+ ('reports','Reports','Report Center · PDF / CSV / XLSX',['report'],['js/charts/reportCharts.js','js/services/reportBuilder.js','js/services/qr.js','js/services/reportIntegrity.js','js/services/reportRenderer.js'],'reports'),
 ]
 TPL='''<!DOCTYPE html>
 <html lang="zh-Hant-TW">
