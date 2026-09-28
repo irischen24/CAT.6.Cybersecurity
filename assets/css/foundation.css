@@ -188,3 +188,11 @@
 .c6-doc::-webkit-scrollbar-thumb:active, .c6-doc ::-webkit-scrollbar-thumb:active { background: var(--c6-scroll-thumb-active); }
 .c6-doc::-webkit-scrollbar-corner, .c6-doc ::-webkit-scrollbar-corner { background: var(--c6-scroll-track); }
 .c6-side::-webkit-scrollbar-track, .c6-table-wrap::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- Brand component (js/ui/brand.js) — images keep their aspect ratio ---- */
+.c6-brand-lockup { display: inline-flex; align-items: center; gap: .6rem; min-width: 0; color: inherit; font-weight: 600; letter-spacing: -0.01em; }
+.c6-brand-lockup__mark { width: 28px; height: 28px; flex: none; }
+.c6-brand-lockup__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c6-brand-img { display: block; height: 28px; width: auto; max-width: 100%; object-fit: contain; }
+.c6-brand-lockup__img { height: 28px; }
+.c6-brand__mark.c6-brand-img { width: auto; height: 28px; }
