@@ -10,7 +10,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 OUT = os.environ.get('E2E_OUT', os.path.join(tempfile.gettempdir(), 'cat6-e2e'))
 os.makedirs(OUT, exist_ok=True)
 PORT = int(os.environ.get('E2E_PORT', '8765'))
-PAGES = ['index.html', 'verify/index.html'] + ['app/' + f for f in sorted(os.listdir(os.path.join(ROOT, 'app'))) if f.endswith('.html')]
+PAGES = ['index.html', 'verify/index.html', 'trust/index.html', 'trust/doc.html?id=iso27001', 'trust/doc.html?id=iso27017', 'trust/doc.html?id=vapt', 'trust/doc.html?id=soc2'] + ['app/' + f for f in sorted(os.listdir(os.path.join(ROOT, 'app'))) if f.endswith('.html')]
 VIEWPORTS = [(1440, 900), (820, 1180), (360, 780)]
 IGNORE = re.compile(r'Failed to load resource|fonts\.(googleapis|gstatic)|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION|net::ERR_')
 results = []
@@ -307,6 +307,47 @@ with sync_playwright() as p:
     pg.set_viewport_size({'width': 1440, 'height': 400}); pg.wait_for_timeout(200)
     pg.screenshot(path=os.path.join(OUT, 'scrollbar-1440.png'))
     ok('No errors in sidebar flows', not errs, errs[:3])
+    ctx.close()
+    # ---------- 7d. brand + Trust & Security + demo documents ----------
+    ctx = b.new_context(viewport={'width': 1440, 'height': 900}); pg = ctx.new_page(); errs = []; watch(pg, errs)
+    for path in ['index.html', 'app/dashboard.html', 'app/reports.html', 'verify/index.html', 'trust/index.html']:
+        pg.goto(BASE + path); pg.wait_for_load_state('networkidle'); pg.wait_for_timeout(300)
+        n = pg.evaluate("document.querySelectorAll('.c6-brand-lockup, .c6-brand__mark, .c6-brand-img').length")
+        fav = pg.evaluate("(document.querySelector('link[rel=icon]') || {}).href || ''")
+        ok('Brand component rendered + favicon: %s' % path, n >= 1 and fav != '', '%d brand nodes' % n)
+    swap = pg.evaluate("() => { CAT6.data.brand.assets.horizontal = 'assets/brand/cat6-logo-horizontal.png'; const h = CAT6.ui.brand.lockup(); CAT6.data.brand.assets.horizontal = ''; return h; }")
+    ok('Brand component switches to the official asset path when configured (root-relative URL)', 'cat6-logo-horizontal.png' in swap and '/assets/brand/' in swap)
+    pg.goto(BASE + 'index.html'); pg.wait_for_load_state('networkidle')
+    cards = pg.locator('#trust-grid .c6-trust__card')
+    t = pg.inner_text('#trust')
+    ok('Home: Trust & Security has 4 compliance cards', cards.count() == 4 and all(k in t for k in ['ISO/IEC 27001', 'ISO/IEC 27017', 'VAPT', 'SOC 2 Type II']))
+    ok('Home: only DEMO / PLANNED / ROADMAP badges, no CERTIFIED / VERIFIED / PASSED', not re.search(r'\bCERTIFIED\b|\bVERIFIED\b|\bPASSED\b', t.replace('PLANNED CERTIFICATION', '')))
+    def cols(w):
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200)
+        return pg.evaluate("getComputedStyle(document.getElementById('trust-grid')).gridTemplateColumns.split(' ').length")
+    cc = (cols(1440), cols(820), cols(360))
+    ok('Home trust grid: 4 / 2 / 1 columns (desktop / tablet / mobile)', cc == (4, 2, 1), cc)
+    pg.set_viewport_size({'width': 1440, 'height': 900})
+    pg.locator('#trust-grid a', has_text='View Demo Document').first.click(); pg.wait_for_load_state('networkidle')
+    ok('View Demo Document → CAT.6 Trust Center / demo document', '/trust/' in pg.url)
+    PDFS = {'iso27001': 'DEMO-ISO27001-CAT6-001', 'iso27017': 'DEMO-ISO27017-CAT6-001', 'vapt': 'DEMO-VAPT-CAT6-001', 'soc2': 'DEMO-SOC2-CAT6-001'}
+    for doc in ['iso27001', 'iso27017', 'vapt', 'soc2']:
+        pg.goto(BASE + 'trust/doc.html?id=' + doc); pg.wait_for_load_state('networkidle')
+        svgtxt = pg.evaluate("document.querySelector('#doc svg').textContent")
+        ok('Demo doc %s: SAMPLE / DEMO ONLY / NOT A REAL CERTIFICATION inside the document itself' % doc, all(k in svgtxt for k in ['SAMPLE', 'DEMO ONLY', 'NOT A REAL CERTIFICATION', '模擬文件']))
+        pg.emulate_media(media='print')
+        vis = pg.evaluate("(() => { const s = document.querySelector('#doc svg'); const r = s.getBoundingClientRect(); return getComputedStyle(s).display !== 'none' && getComputedStyle(s).visibility !== 'hidden' && r.width > 100; })()")
+        pg.emulate_media(media='screen')
+        ok('Demo doc %s: marks stay visible in print media' % doc, vis)
+        if doc == 'vapt': ok('VAPT demo: SIMULATED DATA, not a certification, no pass/fail', svgtxt.count('SIMULATED DATA') >= 3 and 'not a certification' in svgtxt.lower() and not re.search(r'\bPASSED\b|\bSECURE\b', svgtxt))
+        if doc == 'soc2': ok('SOC 2 demo: NO INDEPENDENT AUDITOR OPINION, not a certificate', 'NO INDEPENDENT AUDITOR OPINION' in svgtxt and 'not a certificate' in svgtxt.lower() and 'CERTIFIED' not in svgtxt)
+        r = pg.request.get(BASE + 'trust/docs/' + PDFS[doc] + '.pdf')
+        ok('Demo doc %s: PDF asset served (200)' % doc, r.status == 200)
+    pg.goto(BASE + 'trust/?doc=DEMO-ISO27001-CAT6-001'); pg.wait_for_load_state('networkidle')
+    ok('Trust Center QR lookup states SAMPLE (no VERIFIED)', 'SAMPLE DOCUMENT' in pg.inner_text('#lookup') and 'VERIFIED' not in pg.inner_text('#lookup'))
+    pg.goto(BASE + 'trust/?doc=REAL-CERT-123'); pg.wait_for_load_state('networkidle')
+    ok('Trust Center unknown document → NOT FOUND', 'NOT FOUND' in pg.inner_text('#lookup'))
+    ok('No errors on brand / trust pages', not errs, errs[:3])
     ctx.close()
     # ---------- 8. file:// fallback ----------
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})

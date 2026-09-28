@@ -8,7 +8,7 @@ globalThis.window = globalThis;
 const load = f => vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
 /* Same script order as the app pages (tools/gen_pages.py CORE) minus pure-DOM UI modules. */
 [
-  'js/core/namespace.js', 'js/config.js', 'js/core/format.js', 'js/core/provenance.js', 'js/core/dom.js', 'js/core/repository.js',
+  'js/core/namespace.js', 'js/config.js', 'js/core/format.js', 'js/core/provenance.js', 'js/core/dom.js', 'js/core/repository.js', 'data/compliance.js',
   'data/risk-criteria.js', 'data/frameworks.js', 'data/references.js', 'data/nist-likelihood.js',
   'data/catalog/iso27001.js', 'data/catalog/csf2.js', 'data/catalog/cis-controls.js', 'data/catalog/nist-impact-risk.js', 'data/catalog/framework-library.js', 'data/catalog/framework-mapping.js',
   'data/defaults/meta.js', 'data/defaults/workspace-defaults.js', 'data/defaults/risk-defaults.js', 'data/defaults/nist-defaults.js', 'data/defaults/cis-ram-defaults.js',
@@ -272,6 +272,18 @@ t('Reports list defaults with basis', RR.render(RB.build('combined', data, {})).
     t('No private key / service_role / signing secret in shipped files', bad.length === 0, bad.join(', '));
     const jwt = (C.config.supabase.anonKey || '').split('.')[1];
     t('Configured Supabase key is the anon role', !jwt || JSON.parse(Buffer.from(jwt, 'base64').toString()).role === 'anon');
+  }
+
+  // ---- Trust & Security: compliance data model + demo documents
+  {
+    const CP = C.data.compliance;
+    t('Compliance: 4 items (ISO 27001, VAPT, ISO 27017, SOC 2 Type II), all isDemo', CP.items.map(i => i.id).join() === 'iso27001,vapt,iso27017,soc2' && CP.items.every(i => i.isDemo === true && !i.issuer && !i.issueDate));
+    t('Compliance: demo badges limited to DEMO / PLANNED / ROADMAP', CP.items.every(i => CP.badges(i).length && CP.badges(i).every(b => ['DEMO', 'PLANNED', 'ROADMAP'].includes(b))));
+    t('Compliance: CERTIFIED can never be shown for a demo record', CP.badges(Object.assign({}, CP.items[0], { badges: ['CERTIFIED', 'DEMO'] })).join() === 'DEMO' && !CP.canClaim(CP.items[0]));
+    t('Compliance: production claim needs issuer + dates + https verification', CP.canClaim({ isDemo: false, issuer: 'X', issueDate: '2027-01-01', expiryDate: '2030-01-01', verificationUrl: 'https://cb.example/verify/1' }) && !CP.canClaim({ isDemo: false, issuer: 'X', issueDate: '2027-01-01', verificationUrl: '' }));
+    t('Compliance: VAPT typed as assessment, SOC 2 as attestation report (not certificates)', CP.items.find(i => i.id === 'vapt').type === 'ASSESSMENT' && CP.items.find(i => i.id === 'soc2').type === 'ATTESTATION_REPORT');
+    const noLabel = CP.items.every(i => !/CERTIFIED|VERIFIED|PASSED/.test(i.statusLabel + CP.badges(i).join(' ')));
+    t('Compliance: no CERTIFIED / VERIFIED / PASSED status labels', noLabel);
   }
 
   // ---- Worker ⇄ main thread determinism: execute js/workers/fair.worker.js in a worker-like sandbox
