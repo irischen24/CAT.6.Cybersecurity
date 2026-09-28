@@ -7,7 +7,7 @@
 .c6-nav__sublink:focus-visible { outline: 2px solid var(--c6-purple); outline-offset: 2px; }
 .c6-nav__sublink[aria-current="page"] { color: #fff; border-left-color: var(--c6-purple); background: rgba(124,92,252,0.14); }
 .c6-nav__link--group { color: var(--c6-fg); }
-@media (min-width: 768px) and (max-width: 1199px) { .c6-nav__sub { display: none; } .c6-nav__link--group { box-shadow: inset 0 0 0 1px var(--c6-border-accent); } }
+[data-side-view="rail"] .c6-nav__link--group { box-shadow: inset 0 0 0 1px var(--c6-border-accent); }
 .c6-side { overflow-y: auto; }
 
 /* ---- In-page sub navigation (always reachable, incl. tablet rail) ---- */

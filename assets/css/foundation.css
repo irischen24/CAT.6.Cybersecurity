@@ -169,3 +169,22 @@
   .c6-btn, .c6-card, .c6-input { transition: none !important; }
   .c6-card--lift:hover { transform: none; }
 }
+
+/* ---- CAT.6 global scrollbar (page, sidebar, tables, dialogs, drawers) — tokens from tokens.css ---- */
+/* Firefox (standard properties). Chromium ≥121 would let these override ::-webkit-scrollbar and lose the rounded
+   thumb, so they are applied only where the WebKit pseudo-elements are unsupported. */
+@supports not selector(::-webkit-scrollbar) {
+  .c6-doc, .c6-doc * { scrollbar-width: thin; scrollbar-color: var(--c6-scroll-thumb) var(--c6-scroll-track); }
+}
+.c6-doc { background: var(--c6-bg-deep); color-scheme: dark; }
+/* Chromium / Safari / Edge */
+.c6-doc::-webkit-scrollbar, .c6-doc ::-webkit-scrollbar { width: var(--c6-scroll-size); height: var(--c6-scroll-size); }
+.c6-doc::-webkit-scrollbar-track, .c6-doc ::-webkit-scrollbar-track { background: var(--c6-scroll-track); }
+.c6-doc::-webkit-scrollbar-thumb, .c6-doc ::-webkit-scrollbar-thumb {
+  background: var(--c6-scroll-thumb); border-radius: var(--c6-r-full);
+  border: 2px solid var(--c6-scroll-track);                          /* inset look, keeps it thin and quiet */
+}
+.c6-doc::-webkit-scrollbar-thumb:hover, .c6-doc ::-webkit-scrollbar-thumb:hover { background: var(--c6-scroll-thumb-hover); }
+.c6-doc::-webkit-scrollbar-thumb:active, .c6-doc ::-webkit-scrollbar-thumb:active { background: var(--c6-scroll-thumb-active); }
+.c6-doc::-webkit-scrollbar-corner, .c6-doc ::-webkit-scrollbar-corner { background: var(--c6-scroll-track); }
+.c6-side::-webkit-scrollbar-track, .c6-table-wrap::-webkit-scrollbar-track { background: transparent; }

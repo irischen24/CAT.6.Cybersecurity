@@ -1,5 +1,6 @@
-/* CAT.6 design tokens — scoped to .c6-root (no :root / * / body resets). */
-.c6-root {
+/* CAT.6 design tokens — scoped to .c6-root, plus html.c6-doc so the page (viewport) scrollbar can use them.
+ * (No :root / * / body resets.) */
+.c6-root, .c6-doc {
   /* Color */
   --c6-bg-deep: #020203;
   --c6-bg-base: #050506;
@@ -49,6 +50,17 @@
   /* Motion */
   --c6-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --c6-t-quick: 200ms; --c6-t-std: 300ms; --c6-t-enter: 600ms; --c6-t-ambient: 9000ms;
+
+  /* Sidebar */
+  --c6-side-full: 264px; --c6-side-rail: 76px; --c6-side-drawer: 280px;
+  --c6-t-side: 200ms; --c6-ease-side: cubic-bezier(0.2, 0, 0, 1);   /* fast, no overshoot */
+
+  /* Scrollbar — graphite track, muted purple thumb (derived from --c6-purple, no extra hex codes) */
+  --c6-scroll-size: 8px;
+  --c6-scroll-track: var(--c6-bg-elevated);
+  --c6-scroll-thumb: color-mix(in srgb, var(--c6-purple) 38%, var(--c6-bg-elevated));
+  --c6-scroll-thumb-hover: color-mix(in srgb, var(--c6-purple) 62%, var(--c6-bg-elevated));
+  --c6-scroll-thumb-active: color-mix(in srgb, var(--c6-purple) 78%, var(--c6-bg-elevated));
 
   /* Spacing */
   --c6-space-1: 0.25rem; --c6-space-2: 0.5rem; --c6-space-3: 0.75rem; --c6-space-4: 1rem;
