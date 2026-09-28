@@ -41,7 +41,9 @@
     draw();
     if ('ResizeObserver' in window) {
       var last = container.clientWidth;
-      new ResizeObserver(function () { if (Math.abs(container.clientWidth - last) > 8) { last = container.clientWidth; draw(); } }).observe(container);
+      var timer = null;
+      /* Debounced so a sidebar collapse / expand transition redraws once, after the width settles. */
+      new ResizeObserver(function () { clearTimeout(timer); timer = setTimeout(function () { if (Math.abs(container.clientWidth - last) > 8) { last = container.clientWidth; draw(); } }, 160); }).observe(container);
     }
   }
   function niceMax(v) { var p = Math.pow(10, Math.floor(Math.log10(v))); var m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
