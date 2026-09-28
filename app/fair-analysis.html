@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/css/tokens.css?v=20260928h">
-<link rel="stylesheet" href="../assets/css/foundation.css?v=20260928h">
-<link rel="stylesheet" href="../assets/css/app-shell.css?v=20260928h">
-<link rel="stylesheet" href="../assets/css/dashboard.css?v=20260928h">
-<link rel="stylesheet" href="../assets/css/components.css?v=20260928h">
-<link rel="stylesheet" href="../assets/css/fair.css?v=20260928h">
+<link rel="stylesheet" href="../assets/css/tokens.css?v=20260928j">
+<link rel="stylesheet" href="../assets/css/foundation.css?v=20260928j">
+<link rel="stylesheet" href="../assets/css/app-shell.css?v=20260928j">
+<link rel="stylesheet" href="../assets/css/dashboard.css?v=20260928j">
+<link rel="stylesheet" href="../assets/css/components.css?v=20260928j">
+<link rel="stylesheet" href="../assets/css/fair.css?v=20260928j">
 </head>
 <body>
 <div class="c6-root c6-app">
@@ -46,10 +46,17 @@
 
       <div class="c6-grid">
         <section class="c6-card c6-span-full" aria-labelledby="sc-h">
-          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="sc-h">量化的風險情境</h2><p class="c6-panel__sub">FAIR 為選用的量化步驟（Workflow 01 · Optional FAIR Quantification）；輸入值與模擬紀錄存在目前的評估中</p></div><span id="in-prov"></span></div>
+          <div class="c6-panel__head"><div><h2 class="c6-panel__title" id="sc-h">FAIR Scenarios 量化情境（1…N）</h2><p class="c6-panel__sub">FAIR 為選用的量化步驟（Workflow 01 · Optional FAIR Quantification）；輸入值與模擬紀錄存在目前的評估中</p></div><span id="in-prov"></span></div>
           <div class="c6-row" style="flex-wrap:wrap;gap:.75rem;align-items:flex-end">
-            <label class="c6-field" style="min-width:16rem;flex:1"><span class="c6-var__lbl">Risk Scenario 風險情境</span><select class="c6-input" id="risk-sel"></select></label>
-            <button class="c6-btn c6-btn--secondary" type="button" id="save-inputs">儲存輸入值</button>
+            <label class="c6-field" style="min-width:14rem;flex:1"><span class="c6-var__lbl">FAIR Scenario 量化情境</span><select class="c6-input" id="scn-sel"></select></label>
+            <button class="c6-btn c6-btn--secondary" type="button" id="scn-add">新增情境</button>
+            <button class="c6-btn c6-btn--ghost" type="button" id="scn-del">刪除情境</button>
+          </div>
+          <div class="c6-row" style="flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-top:.75rem">
+            <label class="c6-field" style="min-width:12rem;flex:1"><span class="c6-var__lbl">Scenario Name 情境名稱</span><input class="c6-input" id="scn-name" maxlength="120"></label>
+            <label class="c6-field" style="min-width:14rem;flex:1"><span class="c6-var__lbl">Risk 對應風險</span><select class="c6-input" id="risk-sel"></select></label>
+            <label class="c6-field" style="min-width:7rem"><span class="c6-var__lbl">Currency</span><select class="c6-input" id="scn-cur"><option>TWD</option><option>USD</option><option>EUR</option><option>JPY</option></select></label>
+            <button class="c6-btn c6-btn--secondary" type="button" id="save-inputs">儲存情境</button>
             <a class="c6-btn c6-btn--ghost" id="risk-link" href="risk-register.html">在 Risk Register 檢視</a>
           </div>
           <p class="c6-note" id="save-status" aria-live="polite" style="margin-top:.5rem"></p>
@@ -72,7 +79,7 @@
 LEF = TEF × Susceptibility
 LM  = Primary Loss + Secondary Loss
 Annual Risk = LEF × LM</pre>
-            <div class="c6-row" style="gap:.5rem;flex-wrap:wrap"><button class="c6-btn c6-btn--primary" type="button" id="run">Run Monte Carlo Simulation</button><button class="c6-btn c6-btn--ghost" type="button" id="cancel" hidden>取消</button></div>
+            <div class="c6-row" style="gap:.5rem;flex-wrap:wrap"><button class="c6-btn c6-btn--primary" type="button" id="run">Run Monte Carlo Simulation</button><button class="c6-btn c6-btn--ghost" type="button" id="cancel" hidden>取消</button><button class="c6-btn c6-btn--secondary" type="button" id="run-all">執行所有情境</button></div>
             <p class="c6-note" id="run-state" role="status" aria-live="polite"><span class="c6-st c6-st--NOT_ASSESSED">Idle</span> 尚未執行</p>
             <div class="c6-progress" hidden id="progress">
               <div class="c6-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="模擬進度"><div class="c6-progress__bar"></div></div>
@@ -139,58 +146,60 @@ Annual Risk = LEF × LM</pre>
   </div>
 </div>
 
-<script src="../js/core/namespace.js?v=20260928h"></script>
-<script src="../js/config.js?v=20260928h"></script>
-<script src="../js/core/format.js?v=20260928h"></script>
-<script src="../js/core/provenance.js?v=20260928h"></script>
-<script src="../js/core/dom.js?v=20260928h"></script>
-<script src="../js/core/repository.js?v=20260928h"></script>
-<script src="../data/risk-criteria.js?v=20260928h"></script>
-<script src="../data/frameworks.js?v=20260928h"></script>
-<script src="../data/references.js?v=20260928h"></script>
-<script src="../data/nist-likelihood.js?v=20260928h"></script>
-<script src="../data/catalog/iso27001.js?v=20260928h"></script>
-<script src="../data/catalog/csf2.js?v=20260928h"></script>
-<script src="../data/catalog/cis-controls.js?v=20260928h"></script>
-<script src="../data/catalog/nist-impact-risk.js?v=20260928h"></script>
-<script src="../data/catalog/framework-library.js?v=20260928h"></script>
-<script src="../data/catalog/framework-mapping.js?v=20260928h"></script>
-<script src="../data/defaults/meta.js?v=20260928h"></script>
-<script src="../data/defaults/workspace-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/risk-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/nist-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/cis-ram-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/cis-controls-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/nist-csf-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/iso-readiness-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/fair-defaults.js?v=20260928h"></script>
-<script src="../data/defaults/parameters.js?v=20260928h"></script>
-<script src="../js/calculations/rng.js?v=20260928h"></script>
-<script src="../js/calculations/distributions.js?v=20260928h"></script>
-<script src="../js/calculations/stats.js?v=20260928h"></script>
-<script src="../js/calculations/riskMatrixEngine.js?v=20260928h"></script>
-<script src="../js/calculations/nistRiskEngine.js?v=20260928h"></script>
-<script src="../js/calculations/cisRamEngine.js?v=20260928h"></script>
-<script src="../js/calculations/cisControlsEngine.js?v=20260928h"></script>
-<script src="../js/calculations/csfEngine.js?v=20260928h"></script>
-<script src="../js/calculations/treatmentEngine.js?v=20260928h"></script>
-<script src="../js/calculations/isoReadinessEngine.js?v=20260928h"></script>
-<script src="../js/calculations/fairMonteCarloEngine.js?v=20260928h"></script>
-<script src="../js/services/workspace.js?v=20260928h"></script>
-<script src="../js/services/xlsx.js?v=20260928h"></script>
-<script src="../js/services/exportService.js?v=20260928h"></script>
-<script src="../js/charts/svg.js?v=20260928h"></script>
-<script src="../js/charts/hbars.js?v=20260928h"></script>
-<script src="../js/ui/icons.js?v=20260928h"></script>
-<script src="../data/brand.js?v=20260928h"></script>
-<script src="../js/ui/brand.js?v=20260928h"></script>
-<script src="../js/ui/shell.js?v=20260928h"></script>
-<script src="../js/ui/table.js?v=20260928h"></script>
-<script src="../js/ui/form.js?v=20260928h"></script>
-<script src="../js/ui/page.js?v=20260928h"></script>
-<script src="../js/services/fairAnalysisService.js?v=20260928h"></script>
-<script src="../js/services/csvImportService.js?v=20260928h"></script>
-<script src="../js/charts/fairCharts.js?v=20260928h"></script>
-<script src="../js/pages/fair-analysis.js?v=20260928h"></script>
+<script src="../js/core/namespace.js?v=20260928j"></script>
+<script src="../js/config.js?v=20260928j"></script>
+<script src="../js/core/format.js?v=20260928j"></script>
+<script src="../js/core/provenance.js?v=20260928j"></script>
+<script src="../js/core/dom.js?v=20260928j"></script>
+<script src="../js/core/normalize.js?v=20260928j"></script>
+<script src="../js/core/repository.js?v=20260928j"></script>
+<script src="../data/risk-criteria.js?v=20260928j"></script>
+<script src="../data/frameworks.js?v=20260928j"></script>
+<script src="../data/references.js?v=20260928j"></script>
+<script src="../data/nist-likelihood.js?v=20260928j"></script>
+<script src="../data/catalog/iso27001.js?v=20260928j"></script>
+<script src="../data/catalog/csf2.js?v=20260928j"></script>
+<script src="../data/catalog/cis-controls.js?v=20260928j"></script>
+<script src="../data/catalog/nist-impact-risk.js?v=20260928j"></script>
+<script src="../data/catalog/framework-library.js?v=20260928j"></script>
+<script src="../data/catalog/framework-mapping.js?v=20260928j"></script>
+<script src="../data/defaults/meta.js?v=20260928j"></script>
+<script src="../data/defaults/workspace-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/risk-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/nist-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/cis-ram-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/cis-controls-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/nist-csf-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/iso-readiness-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/fair-defaults.js?v=20260928j"></script>
+<script src="../data/defaults/parameters.js?v=20260928j"></script>
+<script src="../js/calculations/rng.js?v=20260928j"></script>
+<script src="../js/calculations/distributions.js?v=20260928j"></script>
+<script src="../js/calculations/stats.js?v=20260928j"></script>
+<script src="../js/calculations/riskMatrixEngine.js?v=20260928j"></script>
+<script src="../js/calculations/nistRiskEngine.js?v=20260928j"></script>
+<script src="../js/calculations/cisRamEngine.js?v=20260928j"></script>
+<script src="../js/calculations/cisControlsEngine.js?v=20260928j"></script>
+<script src="../js/calculations/csfEngine.js?v=20260928j"></script>
+<script src="../js/calculations/treatmentEngine.js?v=20260928j"></script>
+<script src="../js/calculations/isoReadinessEngine.js?v=20260928j"></script>
+<script src="../js/calculations/fairMonteCarloEngine.js?v=20260928j"></script>
+<script src="../js/services/workspace.js?v=20260928j"></script>
+<script src="../js/services/xlsx.js?v=20260928j"></script>
+<script src="../js/services/exportService.js?v=20260928j"></script>
+<script src="../js/charts/svg.js?v=20260928j"></script>
+<script src="../js/charts/hbars.js?v=20260928j"></script>
+<script src="../js/ui/icons.js?v=20260928j"></script>
+<script src="../data/brand.js?v=20260928j"></script>
+<script src="../js/ui/brand.js?v=20260928j"></script>
+<script src="../js/ui/shell.js?v=20260928j"></script>
+<script src="../js/ui/table.js?v=20260928j"></script>
+<script src="../js/ui/form.js?v=20260928j"></script>
+<script src="../js/ui/page.js?v=20260928j"></script>
+<script src="../js/services/fairAnalysisService.js?v=20260928j"></script>
+<script src="../js/services/fairScenarios.js?v=20260928j"></script>
+<script src="../js/services/csvImportService.js?v=20260928j"></script>
+<script src="../js/charts/fairCharts.js?v=20260928j"></script>
+<script src="../js/pages/fair-analysis.js?v=20260928j"></script>
 </body>
 </html>
