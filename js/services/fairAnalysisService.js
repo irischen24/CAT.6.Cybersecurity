@@ -40,7 +40,8 @@
     var report = onProgress || function () {}, worker = null, settled = false, api = { engine: 'worker' };
     var errs = C.calc.fair.validate(inputs);
     if (errs.length) { var e = new Error('FAIR input validation failed'); e.errors = errs; api.promise = Promise.reject(e); api.cancel = function () {}; return api; }
-    var rejectFn;
+    var rejectFn, jobId = 'job-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    api.jobId = jobId;
     api.promise = new Promise(function (resolve, reject) {
       rejectFn = reject;
       function fallback(reason) {
@@ -57,12 +58,13 @@
       var started = false;
       worker.onmessage = function (ev) {
         var m = ev.data; started = true;
+        if (m.jobId !== jobId) return;   /* ignore anything not produced for this job (defence against cross-talk) */
         if (m.type === 'progress') report(m);
         else if (m.type === 'done') { settled = true; worker.terminate(); resolve(m.result); }
         else if (m.type === 'error') { settled = true; worker.terminate(); var er = new Error(m.message); er.errors = m.errors; reject(er); }
       };
       worker.onerror = function (ev) { ev.preventDefault(); if (!started) fallback('Worker 載入失敗'); else if (!settled) { settled = true; reject(new Error('Worker 錯誤：' + (ev.message || ''))); } };
-      worker.postMessage({ type: 'run', inputs: inputs, iterations: opts.iterations, seed: opts.seed });
+      worker.postMessage({ type: 'run', jobId: jobId, inputs: inputs, iterations: opts.iterations, seed: opts.seed });
     });
     api.cancel = function () { if (worker && !settled) { worker.terminate(); settled = true; var c = new Error('已取消模擬'); c.cancelled = true; rejectFn(c); } };
     return api;

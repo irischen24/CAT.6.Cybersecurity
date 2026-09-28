@@ -20,6 +20,7 @@
   function block(b) {
     switch (b.kind) {
       case 'h': return '<h3 class="c6r-h3">' + esc(b.text) + '</h3>';
+      case 'pagebreak': return '<div class="c6r-pb" aria-hidden="true"></div>';
       case 'p': return '<p>' + esc(b.text).replace(/DATA REQUIRED/g, '<span class="c6r-dr">DATA REQUIRED</span>') + '</p>';
       case 'callout': return '<p class="c6r-callout c6r-callout--' + b.tone + '"><strong>' + (b.tone === 'warn' ? '⚠ ' : 'ⓘ ') + '</strong>' + esc(b.text) + '</p>';
       case 'list': return '<ul class="c6r-list">' + b.items.map(function (i) { return '<li>' + esc(i).replace(/DATA REQUIRED/g, '<span class="c6r-dr">DATA REQUIRED</span>') + '</li>'; }).join('') + '</ul>';

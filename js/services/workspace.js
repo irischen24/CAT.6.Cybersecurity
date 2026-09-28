@@ -77,7 +77,16 @@
   function load(cols) {
     return Promise.all(cols.map(function (c) { return W.repo.list(c); })).then(function (lists) {
       var out = {};
-      cols.forEach(function (c, i) { out[c] = GLOBAL[c] ? lists[i] : lists[i].filter(function (r) { return r.assessmentId === W.meta.current; }); });
+      var issues = [];
+      cols.forEach(function (c, i) {
+        var raw = (Array.isArray(lists[i]) ? lists[i] : []).filter(function (r) { return r && (GLOBAL[c] || r.assessmentId === W.meta.current); });
+        /* One normalization layer for every source (local, Supabase JSONB, imports, legacy CAT.6) — returns copies. */
+        var n = C.util.normalize ? C.util.normalize.collection(c, raw) : { records: raw, issues: [] };
+        out[c] = n.records; issues = issues.concat(n.issues);
+      });
+      /* Issues travel with the result of THIS load (a concurrent load of other collections cannot erase them). */
+      Object.defineProperty(out, '__formatIssues', { value: issues, enumerable: false });
+      W.formatIssues = issues;
       return out;
     });
   }
