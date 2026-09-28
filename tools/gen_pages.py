@@ -4,7 +4,7 @@ ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 CORE=['js/core/namespace.js','js/config.js','js/core/format.js','js/core/provenance.js','js/core/dom.js','js/core/repository.js',
  'data/risk-criteria.js','data/frameworks.js','data/references.js','data/nist-likelihood.js',
  'data/catalog/iso27001.js','data/catalog/csf2.js','data/catalog/cis-controls.js','data/catalog/nist-impact-risk.js','data/catalog/framework-library.js','data/catalog/framework-mapping.js',
- 'data/defaults/_meta.js','data/defaults/workspace-defaults.js','data/defaults/risk-defaults.js','data/defaults/nist-defaults.js','data/defaults/cis-ram-defaults.js',
+ 'data/defaults/meta.js','data/defaults/workspace-defaults.js','data/defaults/risk-defaults.js','data/defaults/nist-defaults.js','data/defaults/cis-ram-defaults.js',
  'data/defaults/cis-controls-defaults.js','data/defaults/nist-csf-defaults.js','data/defaults/iso-readiness-defaults.js','data/defaults/fair-defaults.js','data/defaults/parameters.js',
  'js/calculations/rng.js','js/calculations/distributions.js','js/calculations/stats.js','js/calculations/riskMatrixEngine.js','js/calculations/nistRiskEngine.js','js/calculations/cisRamEngine.js',
  'js/calculations/cisControlsEngine.js','js/calculations/csfEngine.js','js/calculations/treatmentEngine.js','js/calculations/isoReadinessEngine.js','js/calculations/fairMonteCarloEngine.js',
