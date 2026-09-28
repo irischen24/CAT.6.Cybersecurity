@@ -9,7 +9,7 @@ CORE=['js/core/namespace.js','js/config.js','js/core/format.js','js/core/provena
  'js/calculations/rng.js','js/calculations/distributions.js','js/calculations/stats.js','js/calculations/riskMatrixEngine.js','js/calculations/nistRiskEngine.js','js/calculations/cisRamEngine.js',
  'js/calculations/cisControlsEngine.js','js/calculations/csfEngine.js','js/calculations/treatmentEngine.js','js/calculations/isoReadinessEngine.js','js/calculations/fairMonteCarloEngine.js',
  'js/services/workspace.js','js/services/xlsx.js','js/services/exportService.js',
- 'js/charts/svg.js','js/charts/hbars.js','js/ui/icons.js','js/ui/shell.js','js/ui/table.js','js/ui/form.js','js/ui/page.js']
+ 'js/charts/svg.js','js/charts/hbars.js','js/ui/icons.js','data/brand.js','js/ui/brand.js','js/ui/shell.js','js/ui/table.js','js/ui/form.js','js/ui/page.js']
 PAGES=[
  # file, title, ctx, extra css, extra js, page js
  ('dashboard','Dashboard','組織目前的資安風險態勢',['dashboard'],['js/charts/barChart.js','js/charts/lineChart.js','js/charts/riskMatrix.js','js/charts/gauge.js'],'dashboard'),
