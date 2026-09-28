@@ -33,7 +33,7 @@
       return '<li><a class="c6-nav__link' + (inGroup ? ' c6-nav__link--group' : '') + '" href="' + n.href + '" title="' + n.label + ' · ' + n.zh + '"' + (cur ? ' aria-current="page"' : '') + '>' + inner + '</a>' + kids + '</li>';
     }).join('');
     el.innerHTML =
-      '<div class="c6-side__head"><a class="c6-brand" href="../index.html">' + I.mark('c6-brand__mark') + '<span class="c6-brand__text">CAT.6 Cybersecurity</span></a>' +
+      '<div class="c6-side__head"><a class="c6-brand" href="../index.html">' + (C.ui.brand ? C.ui.brand.mark('c6-brand__mark') : I.mark('c6-brand__mark')) + '<span class="c6-brand__text">CAT.6 Cybersecurity</span></a>' +
       '<button type="button" class="c6-iconbtn c6-side__toggle" aria-controls="c6-side" aria-expanded="true">' + I.icon('sidebar') + '<span class="c6-sr-only">收合側邊選單</span></button></div>' +
       '<nav aria-label="主選單"><ul class="c6-nav">' + items + '</ul></nav>' +
       '<p class="c6-side__foot">CAT.6 不核發 ISO/IEC 27001 證書；正式驗證須由獨立驗證機構執行。</p>';

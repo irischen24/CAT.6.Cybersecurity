@@ -23,6 +23,8 @@
     download: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M4 4h16"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    cloud: '<path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.2 9.1 4.5 4.5 0 007 18z"/><path d="M12 11v4M10 13h4"/>',
     sidebar: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M15 10l-2 2 2 2"/>',
     check: '<path d="M5 12l4 4 10-10"/>',
     evidence: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 14l2 2 4-4"/>',
@@ -37,10 +39,14 @@
     return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + P[name] + '</svg>';
   }
   /* CAT.6 mark: outer hexagon (six frameworks) around a solid core. */
+  /* Each call gets its own gradient id: a shared id would resolve to the first copy in the document, which may sit in a
+   * hidden element (e.g. the sidebar while printing) and make every other copy render blank. */
+  var markSeq = 0;
   function mark(cls) {
-    return '<svg class="' + (cls || '') + '" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="c6m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B9A6FF"/><stop offset="1" stop-color="#7C5CFC"/></linearGradient></defs>' +
-      '<path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="none" stroke="url(#c6m)" stroke-width="1.6"/>' +
-      '<path d="M16 10l5.2 3v6L16 22l-5.2-3v-6z" fill="url(#c6m)"/></svg>';
+    var gid = 'c6m' + (++markSeq);
+    return '<svg class="' + (cls || '') + '" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B9A6FF"/><stop offset="1" stop-color="#7C5CFC"/></linearGradient></defs>' +
+      '<path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="none" stroke="url(#' + gid + ')" stroke-width="1.6"/>' +
+      '<path d="M16 10l5.2 3v6L16 22l-5.2-3v-6z" fill="url(#' + gid + ')"/></svg>';
   }
   C.ui.icons = { icon: icon, mark: mark };
 })(globalThis.CAT6);
