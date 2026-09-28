@@ -23,6 +23,7 @@
     download: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M4 4h16"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    sidebar: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M15 10l-2 2 2 2"/>',
     check: '<path d="M5 12l4 4 10-10"/>',
     evidence: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 14l2 2 4-4"/>',
     audit: '<circle cx="10" cy="10" r="6"/><path d="M20 20l-5.5-5.5M8 10l1.5 1.5L12.5 8"/>',
