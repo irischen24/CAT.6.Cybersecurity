@@ -1,10 +1,23 @@
 /* Dashboard — reads the current assessment from the workspace, calls the engines, hands results to charts.
  * No calculations inline beyond counting. Every KPI carries its provenance. */
 (function (C) {
-  var P = C.ui.page, W = C.services.workspace, D = C.util.dom, RM = C.calc.riskMatrix, F = C.util.format, PV = C.util.provenance, esc = D.esc;
+  var P = C.ui.page, W = C.services.workspace, D = C.util.dom, RM = C.calc.riskMatrix, F = C.util.format, PV = C.util.provenance, esc = D.esc, DM = C.services.dashboardModel;
   var COLS = ['risks', 'treatments', 'cisControls', 'findings', 'capas', 'snapshots', 'activity', 'fairRuns', 'fairInputs', 'isoContext', 'isoClauses', 'isoSoa', 'evidence', 'audits', 'reviews', 'nist', 'cisram', 'csf'];
   function sev(band) { return '<span class="c6-sev c6-sev--' + band.id.toLowerCase() + '"><span class="c6-sev__shape" aria-hidden="true"></span>' + band.label + '</span>'; }
   function srcOf(rows) { var l = rows.map(function (r) { return r.source; }); return l.indexOf('CAT6_DEFAULT') >= 0 ? 'CAT6_DEFAULT' : l.indexOf('FILE_IMPORT') >= 0 ? 'FILE_IMPORT' : 'USER_INPUT'; }
+
+  /* Export PDF: uses the View Model this page is currently showing (DM.current) — no second data fetch. */
+  function bindExport() {
+    var btn = document.getElementById('dash-pdf'), st = document.getElementById('dash-pdf-status'); if (!btn || btn.dataset.bound) return; btn.dataset.bound = '1';
+    btn.addEventListener('click', function () {
+      if (!DM.current) return;
+      btn.disabled = true; btn.setAttribute('aria-busy', 'true'); st.textContent = 'Generating PDF…'; D.toast('Generating PDF…');
+      C.services.dashboardPdf.export(DM.current, { onProgress: function (i, n) { st.textContent = 'Generating PDF… ' + i + ' / ' + n; } })
+        .then(function (r) { st.textContent = 'PDF generated successfully · ' + r.fileName + '（' + r.pages + ' 頁）'; D.toast('PDF generated successfully（' + r.pages + ' 頁）'); W.log('匯出 Dashboard PDF ' + r.snapshotId, 'CALCULATED'); })
+        .catch(function (e) { if (window.console) console.error('[CAT.6] Dashboard PDF export failed:', e); st.textContent = 'Unable to generate Dashboard PDF：' + (e && e.message || e); D.toast('Unable to generate Dashboard PDF：' + (e && e.message || e), 'bad'); })
+        .then(function () { btn.disabled = false; btn.removeAttribute('aria-busy'); });
+    });
+  }
 
   P.boot({ nav: 'dashboard' }, function () {
     var page = document.getElementById('page');
@@ -22,26 +35,21 @@
       P.card('fq', 'FAIR 量化', '最近一次蒙地卡羅模擬', '<div id="fairq"></div>', { head: '<span id="fq-prov"></span>' }) +
       '</div>';
 
-    return W.load(COLS).then(function (d) {
-      var risks = d.risks, scored = risks.filter(function (r) { return r.likelihood >= 1 && r.impact >= 1; }).map(function (r) { var a = RM.assess(r.likelihood, r.impact); return Object.assign({}, r, { score: a.score, band: a.band }); }).sort(function (a, b) { return b.score - a.score; });
-      var counts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }; scored.forEach(function (r) { counts[r.band.id]++; });
-      P.notice(document.getElementById('c6-notice'), W.usesDefaults(d), { edit: 'risk-assessment.html#setup', dataset: 'risks' });
+    /* Export PDF (Dashboard Analysis Snapshot) — separate from the formal Report Center report. */
+    var tools = document.querySelector('.c6-topbar__tools');
+    if (tools) {
+      var wrap = document.createElement('span'); wrap.className = 'c6-dash-export';
+      wrap.innerHTML = '<button type="button" class="c6-btn c6-btn--secondary c6-btn--sm" id="dash-pdf" aria-describedby="dash-pdf-status">' + C.ui.icons.icon('download') + 'Export PDF</button><span class="c6-sr-only" id="dash-pdf-status" role="status" aria-live="polite"></span>';
+      tools.insertBefore(wrap, tools.firstChild);
+    }
 
-      var target = (W.assessment.targetIG || 'IG1').toLowerCase(), cov = C.calc.cisControls.coverageByIG(d.cisControls)[target];
-      var openF = d.findings.filter(function (f) { return f.status !== 'Closed'; });
-      var R = C.calc.isoReadiness.compute({ context: d.isoContext[0], clauses: d.isoClauses, soa: d.isoSoa, risks: risks, treatments: d.treatments, evidence: d.evidence, audits: d.audits, findings: d.findings, capas: d.capas, reviews: d.reviews });
-      var tsum = C.calc.treatment.summary(d.treatments);
-      var kpis = [
-        { label: 'Critical Risks', value: counts.CRITICAL, meta: '分數 17–25', src: 'CALCULATED', featured: true, href: 'risk-register.html' },
-        { label: 'High Risks', value: counts.HIGH, meta: '分數 10–16', src: 'CALCULATED', href: 'risk-register.html' },
-        { label: 'Active Assessments', value: risks.filter(function (r) { return r.status === 'Draft' || r.status === 'In review'; }).length, meta: '草稿 + 審閱中 · 逾期處理 ' + tsum.OVERDUE, src: risks.length ? srcOf(risks) : 'USER_INPUT', href: 'risk-treatment.html?view=OVERDUE' },
-        cov.coverage == null ? { label: 'Control Coverage', empty: 'DATA REQUIRED', meta: '尚未評估 CIS Controls ' + target.toUpperCase(), href: 'cis-controls.html' }
-          : { label: 'Control Coverage', value: F.pct(cov.coverage), meta: 'CIS ' + target.toUpperCase() + ' 已實施 ' + cov.counts.IMPLEMENTED + ' / ' + cov.assessed, src: 'CALCULATED', href: 'cis-controls.html' },
-        { label: 'Open Findings', value: openF.length, meta: openF.filter(function (f) { return f.type === 'MAJOR_NC' || f.type === 'MINOR_NC'; }).length + ' 不符合 · ' + openF.filter(function (f) { return f.type === 'OFI' || f.type === 'OBSERVATION'; }).length + ' 改善機會', src: d.findings.length ? srcOf(d.findings) : 'USER_INPUT', href: 'iso-audit.html#findings' },
-        R.overall == null ? { label: 'CAT.6 Readiness Indicator', empty: 'DATA REQUIRED', meta: 'ISO 資料不足', href: 'iso-readiness.html' }
-          : { label: 'CAT.6 Readiness Indicator', value: F.pct(R.overall), meta: R.basedOn + ' / ' + R.of + ' 面向 · 非 ISO 分數', src: 'CALCULATED', href: 'iso-readiness.html' }
-      ];
-      document.getElementById('kpis').innerHTML = kpis.map(P.kpi).join('');
+    return W.load(DM.COLLECTIONS).then(function (d) {
+      /* Raw → normalized (workspace.load) → View Model → this page AND the PDF export. */
+      var vm = DM.build(d, W.assessment); DM.current = vm;
+      var risks = d.risks, scored = vm.scored, counts = vm.counts, R = vm.readiness;
+      P.notice(document.getElementById('c6-notice'), vm.usesDefaults, { edit: 'risk-assessment.html#setup', dataset: 'risks' });
+      document.getElementById('kpis').innerHTML = vm.kpis.map(function (k) { return P.kpi(k.empty ? k : Object.assign({}, k, { value: k.text })); }).join('');
+      bindExport();
 
       if (!scored.length) {
         ['bar-c', 'matrix-c'].forEach(function (id) { document.getElementById(id).innerHTML = '<div class="c6-empty">尚無已評分的風險情境。<a class="c6-link" href="risk-register.html">新增風險</a> 或 <a class="c6-link" href="data-import.html?ds=risks">匯入</a>。</div>'; });
@@ -59,23 +67,20 @@
       }
       document.getElementById('bar-prov').innerHTML = PV.badge('CALCULATED');
 
-      var snaps = d.snapshots.slice().sort(function (a, b) { return a.id.localeCompare(b.id); }).slice(-6);
+      var snaps = vm.snapshots;
       if (snaps.length >= 2) {
         C.charts.line.render(document.getElementById('trend-c'), { labels: snaps.map(function (s) { return s.label; }), values: snaps.map(function (s) { return s.highCritical; }) }, { label: '風險趨勢', seriesName: 'High + Critical', height: 210 });
         document.getElementById('trend-sum').textContent = snaps.map(function (s) { return s.label + ' ' + s.highCritical + (s.source === 'CAT6_DEFAULT' ? '（示範）' : ''); }).join('，') + '。';
       } else document.getElementById('trend-c').innerHTML = '<div class="c6-empty">至少需要兩季快照才能顯示趨勢。</div>';
       document.getElementById('trend-prov').innerHTML = snaps.length ? PV.badge(srcOf(snaps)) : '';
 
-      var fwCount = {}; risks.forEach(function (r) { (r.frameworks || []).forEach(function (f) { fwCount[f] = (fwCount[f] || 0) + 1; }); });
-      document.getElementById('cov-l').innerHTML = C.data.frameworks.map(function (f) {
-        var ratio = risks.length ? (fwCount[f.id] || 0) / risks.length : 0;
+      document.getElementById('cov-l').innerHTML = vm.coverage.map(function (f) {
+        var ratio = f.ratio;
         return '<li class="c6-cov__row"><span>' + f.short + '</span><span class="c6-cov__track" role="img" aria-label="' + f.name + ' ' + F.pct(ratio) + '"><span class="c6-cov__fill" style="display:block;width:' + (ratio * 100) + '%"></span></span><span class="c6-cov__pct">' + F.pct(ratio) + '</span></li>';
       }).join('');
       document.getElementById('cov-prov').innerHTML = PV.badge('CALCULATED');
 
-      var values = []; Object.keys(d).forEach(function (k) { if (k === 'activity' || k === 'snapshots') return; d[k].forEach(function (r) { if (r.fields) r.fields.forEach(function (f) { values.push({ source: f.source }); }); else values.push({ source: r.source }); }); });
-      scored.forEach(function () { values.push({ source: 'CALCULATED' }); });
-      var tally = PV.tally(values), total = values.length || 1, bar = document.getElementById('srcbar');
+      var tally = vm.sourceTally, total = vm.sourceTotal || 1, bar = document.getElementById('srcbar');
       bar.setAttribute('aria-label', Object.keys(tally).map(function (k) { return PV.SOURCES[k].label + ' ' + tally[k]; }).join('，'));
       bar.innerHTML = Object.keys(tally).map(function (k) { return tally[k] ? '<span class="c6-srcbar__seg c6-srcbar__seg--' + k.toLowerCase() + '" style="width:' + (tally[k] / total * 100) + '%"></span>' : ''; }).join('');
       document.getElementById('srclegend').innerHTML = Object.keys(tally).map(function (k) { return '<li class="c6-srclegend__item">' + PV.badge(k) + '<span class="c6-srclegend__n">' + tally[k] + '</span><span>' + PV.SOURCES[k].label + ' · ' + F.pct(tally[k] / total) + '</span></li>'; }).join('');
@@ -85,24 +90,25 @@
       document.getElementById('gauge-sum').innerHTML = esc(C.calc.isoReadiness.disclaimer) + ' <a class="c6-link" href="iso-readiness.html">查看細項</a>';
       document.getElementById('iso-prov').innerHTML = PV.badge('CALCULATED');
 
-      var acts = d.activity.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); }).slice(0, 6);
+      var acts = vm.activity;
       document.getElementById('feed-l').innerHTML = acts.length ? acts.map(function (a) {
         return '<li class="c6-feed__item"><span class="c6-feed__avatar" aria-hidden="true">' + PV.SOURCES[a.source || 'USER_INPUT'].icon + '</span><div><p class="c6-feed__who">' + esc(a.who) + ' · ' + esc((a.at || '').slice(0, 16).replace('T', ' ')) + '</p><p class="c6-feed__what">' + esc(a.what) + '</p>' + PV.badge(a.source || 'USER_INPUT') + '</div></li>';
       }).join('') : '<li class="c6-muted">尚無活動</li>';
 
-      var st = {}; risks.forEach(function (r) { st[r.status || 'Draft'] = (st[r.status || 'Draft'] || 0) + 1; });
-      document.getElementById('status-l').innerHTML = ['Draft', 'In review', 'Assessed', 'Treatment planned', 'Closed'].map(function (k) {
-        var n = st[k] || 0; return '<li class="c6-cov__row"><span>' + k + '</span><span class="c6-cov__track" role="img" aria-label="' + k + ' ' + n + '"><span class="c6-cov__fill" style="display:block;width:' + (risks.length ? n / risks.length * 100 : 0) + '%"></span></span><span class="c6-cov__pct">' + n + '</span></li>';
+      document.getElementById('status-l').innerHTML = vm.status.map(function (x) {
+        var k = x.status, n = x.n; return '<li class="c6-cov__row"><span>' + k + '</span><span class="c6-cov__track" role="img" aria-label="' + k + ' ' + n + '"><span class="c6-cov__fill" style="display:block;width:' + (risks.length ? n / risks.length * 100 : 0) + '%"></span></span><span class="c6-cov__pct">' + n + '</span></li>';
       }).join('');
 
-      var run = d.fairRuns.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); })[0], fq = document.getElementById('fairq');
-      if (run) {
-        fq.innerHTML = '<p class="c6-kpi__value" style="margin:0">' + F.currency(run.summaries.AnnualRisk.Mean, 'TWD', { compact: true }) + '<span style="font-size:.875rem;color:var(--c6-fg-muted);font-weight:400"> / 年（Mean ALE）</span></p>' +
-          '<p class="c6-panel__sub" style="margin:.5rem 0 1rem">' + esc(run.riskId || '') + ' · P90 ' + F.currency(run.summaries.AnnualRisk.P90, 'TWD', { compact: true }) + ' · ' + F.num(run.iterations) + ' 次 · seed ' + run.seed + (run.defaultsUsed ? ' · 含 CAT.6 預設值' : '') + '</p><a class="c6-btn c6-btn--secondary" href="fair-analysis.html">開啟 FAIR Analysis</a>';
+      var fq = document.getElementById('fairq'), FR = vm.fair;
+      if (FR.mode === 'runs') {
+        var top = FR.scenarios[0], cur = top.currency || 'TWD';
+        fq.innerHTML = '<p class="c6-kpi__value" style="margin:0">' + F.currency(top.summaries.AnnualRisk.Mean, cur, { compact: true }) + '<span style="font-size:.875rem;color:var(--c6-fg-muted);font-weight:400"> / 年（最高情境 Mean ALE）</span></p>' +
+          '<p class="c6-panel__sub" style="margin:.5rem 0 .75rem">' + FR.scenarios.length + ' 個情境 · 最高：' + esc(top.scenarioId) + '（' + esc(top.riskId || '—') + '）· P90 ' + F.currency(top.summaries.AnnualRisk.P90, cur, { compact: true }) +
+          (FR.sameCurrency && FR.scenarios.length > 1 ? ' · 各情境 ALE 合計 ' + F.currency(FR.totalMean, cur, { compact: true }) : '') + (FR.scenarios.some(function (x) { return x.assumptionStatus !== 'ORGANIZATION_DATA'; }) ? ' · 含 CAT.6 預設值' : '') + '</p>' +
+          '<ul class="c6-cov" style="margin-bottom:1rem">' + FR.scenarios.slice(0, 5).map(function (x) { var mx = top.summaries.AnnualRisk.Mean || 1; return '<li class="c6-cov__row"><span>' + esc(x.scenarioId) + '</span><span class="c6-cov__track" role="img" aria-label="' + esc(x.scenarioId) + '"><span class="c6-cov__fill" style="display:block;width:' + (x.summaries.AnnualRisk.Mean / mx * 100) + '%"></span></span><span class="c6-cov__pct">' + F.currency(x.summaries.AnnualRisk.Mean, x.currency, { compact: true }) + '</span></li>'; }).join('') + '</ul>' +
+          '<a class="c6-btn c6-btn--secondary" href="fair-analysis.html">開啟 FAIR 分析</a>';
       } else {
-        var inp = {}; ((d.fairInputs[0] && d.fairInputs[0].fields) || C.data.fairDefaults.fields).forEach(function (f) { inp[f.field] = f.value; });
-        var pe = C.calc.fair.pointEstimate(inp);
-        fq.innerHTML = '<p class="c6-kpi__value" style="margin:0">' + F.currency(pe.AnnualRisk, 'TWD', { compact: true }) + '<span style="font-size:.875rem;color:var(--c6-fg-muted);font-weight:400"> / 年（點估計）</span></p><p class="c6-panel__sub" style="margin:.5rem 0 1rem">尚未執行模擬。點估計會低估尾端風險，請執行蒙地卡羅模擬查看 P90 / P95。</p><a class="c6-btn c6-btn--primary" href="fair-analysis.html">Run Monte Carlo Simulation</a>';
+        fq.innerHTML = '<p class="c6-kpi__value" style="margin:0">' + F.currency(FR.point.AnnualRisk, 'TWD', { compact: true }) + '<span style="font-size:.875rem;color:var(--c6-fg-muted);font-weight:400"> / 年（點估計）</span></p><p class="c6-panel__sub" style="margin:.5rem 0 1rem">尚未執行模擬。點估計會低估尾端風險。</p><a class="c6-btn c6-btn--secondary" href="fair-analysis.html">執行模擬</a>';
       }
       document.getElementById('fq-prov').innerHTML = PV.badge('CALCULATED');
       page.removeAttribute('aria-busy');

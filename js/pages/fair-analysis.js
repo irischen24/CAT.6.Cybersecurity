@@ -1,9 +1,10 @@
-/* FAIR Analysis page controller. State lives here; all math is in calc/ + services/. */
+/* FAIR Analysis page controller — multi-scenario (1…N `fairInputs` records, each simulated independently).
+ * State lives here; all math is in calc/ + services/ (fairScenarios.js documents the data model). */
 (function (C) {
   var DEF = C.data.fairDefaults, F = C.util.format, P = C.util.provenance, PG = C.ui.page, esc = PG.esc;
-  var W = null, risks = [], runs = [], saved = null, job = null;
+  var W = null, risks = [], runs = [], saved = null, job = null, scenarios = [], FS = C.services.fairScenarios;
   var $ = function (id) { return document.getElementById(id); };
-  var state = { fields: [], riskId: DEF.scenario.id, iterations: DEF.simulation.iterations, seed: DEF.simulation.seed, result: null };
+  var state = { fields: [], riskId: DEF.scenario.id, scn: 'fair', name: '', currency: 'TWD', iterations: DEF.simulation.iterations, seed: DEF.simulation.seed, result: null };
   var LABELS = { TEF: 'TEF（次/年）', LEF: 'LEF（次/年）', PrimaryLoss: 'Primary Loss', SecondaryLoss: 'Secondary Loss', LM: 'Loss Magnitude', AnnualRisk: 'Annual Risk' };
   var MONEY = { PrimaryLoss: 1, SecondaryLoss: 1, LM: 1, AnnualRisk: 1 };
 
@@ -15,19 +16,23 @@
     resetDefaults();
     if (!rec) return;
     if (rec.riskId) state.riskId = rec.riskId;
+    state.scn = rec.scenarioId || rec.id; state.name = rec.scenarioName || ''; state.currency = rec.currency || 'TWD';
     (rec.fields || []).forEach(function (sf) {
       var f = state.fields.filter(function (x) { return x.field === sf.field; })[0];
       if (f && sf.value) { f.value = Object.assign({}, sf.value); f.source = sf.source || rec.source || 'USER_INPUT'; }
     });
   }
   function toRecord() {
-    return Object.assign({}, saved || {}, { id: 'fair', riskId: state.riskId, fields: state.fields.map(function (f) { return { field: f.field, value: Object.assign({}, f.value), source: f.source }; }),
+    var fields = state.fields.map(function (f) { return { field: f.field, value: Object.assign({}, f.value), source: f.source }; });
+    return Object.assign({}, saved || {}, { id: state.scn, scenarioId: state.scn, scenarioName: state.name || riskName(state.riskId), riskId: state.riskId, currency: state.currency,
+      iterations: state.iterations, seed: state.seed, fields: fields, dataSource: FS.fieldsSource(fields), assumptionStatus: FS.assumptionStatus(fields),
       source: usesDefaults() ? 'CAT6_DEFAULT' : (state.fields.some(function (f) { return f.source === 'FILE_IMPORT'; }) ? 'FILE_IMPORT' : 'USER_INPUT') });
   }
   function persist(msg) {
     var rec = toRecord();
     return W.save('fairInputs', rec, { source: rec.source, keepSource: true, verb: '更新 FAIR 輸入' }).then(function (r) {
-      saved = r; $('save-status').textContent = msg || ('已儲存 · ' + new Date().toLocaleTimeString('zh-TW'));
+      saved = r; scenarios = scenarios.filter(function (x) { return (x.scenarioId || x.id) !== r.id; }).concat([FS.scenario(r)]); renderScenarioSel();
+      $('save-status').textContent = msg || ('已儲存 ' + r.id + ' · ' + new Date().toLocaleTimeString('zh-TW'));
       $('in-prov').innerHTML = P.badge(r.source);
     });
   }
@@ -104,6 +109,9 @@
     btn.disabled = true; btn.textContent = '模擬中…'; prog.hidden = false; $('cancel').hidden = false;
     bar.style.width = '0%'; track.setAttribute('aria-valuenow', 0);
     var snapshot = JSON.parse(JSON.stringify(state.fields)), iters = state.iterations, seed = state.seed;
+    /* Scenario identity is captured when the run STARTS, so switching scenarios during a run can never attach this
+     * result to another scenario. Each run has its own Worker (fairAnalysisService) and job id. */
+    var ident = { scenarioId: state.scn, scenarioName: state.name || riskName(state.riskId), riskId: state.riskId, currency: state.currency };
     job = C.services.fair.start(inputsObj(), { iterations: iters, seed: seed }, function (p) {
       if (p.phase === 'fallback') { setState('running', '主執行緒模式：' + p.reason); return; }
       var pc = Math.round(p.progress * 100);
@@ -112,12 +120,13 @@
     });
     setState('running', F.num(iters) + ' 次 · seed ' + seed + ' · 引擎：' + (job.engine === 'worker' ? 'Web Worker' : '主執行緒'));
     job.promise.then(function (res) {
-      res.inputs = snapshot; res.riskId = state.riskId; state.result = res;
+      res.inputs = snapshot; Object.assign(res, ident);
+      if (state.scn === ident.scenarioId) state.result = res;
       var eng = res.engine === 'worker' ? 'Web Worker' : '主執行緒分段計算';
       bar.style.width = '100%'; track.setAttribute('aria-valuenow', 100);
       txt.textContent = '完成：' + F.num(res.iterations) + ' 次，' + (res.durationMs / 1000).toFixed(1) + ' 秒';
       setState('done', F.num(res.iterations) + ' 次 · ' + (res.durationMs / 1000).toFixed(1) + ' 秒 · 引擎：' + eng + (res.fallbackReason ? '（' + res.fallbackReason + '）' : ''));
-      renderResults();
+      if (state.scn === ident.scenarioId) renderResults();
       return saveRun(res);
     }).catch(function (err) {
       if (err.cancelled) { setState('cancel', '已取消，未保存結果'); txt.textContent = '已取消'; return; }
@@ -128,21 +137,23 @@
   $('cancel').addEventListener('click', function () { if (job) job.cancel(); });
 
   function saveRun(res) {
-    var rec = { id: C.util.dom.nextId('RUN', runs, 4), riskId: res.riskId, at: new Date().toISOString(), iterations: res.iterations, seed: res.seed, engine: res.engine,
+    var rec = { id: C.util.dom.nextId('RUN', runs, 4), scenarioId: res.scenarioId, scenarioName: res.scenarioName, riskId: res.riskId, currency: res.currency, at: new Date().toISOString(), iterations: res.iterations, seed: res.seed, engine: res.engine,
+      results: FS.results(res.summaries), distributionData: res.histogram, exceedanceCurveData: res.exceedance,
+      dataSource: FS.fieldsSource(res.inputs), assumptionStatus: FS.assumptionStatus(res.inputs),
       durationMs: res.durationMs, summaries: res.summaries, histogram: res.histogram, exceedance: res.exceedance, pointEstimate: res.pointEstimate,
       inputs: res.inputs.map(function (f) { return { field: f.field, value: f.value, source: f.source, unit: f.unit }; }),
       defaultsUsed: res.inputs.some(function (f) { return f.source === 'CAT6_DEFAULT'; }) };
     return W.save('fairRuns', rec, { source: 'CALCULATED', verb: '完成 FAIR 模擬' }).then(function (r) {
-      runs.push(r); runs = runs.slice(-20); renderRuns();
+      runs.push(r); renderRuns();
     }).catch(function (e) { C.util.dom.toast('模擬結果未能保存：' + e.message, 'bad'); });
   }
 
   function renderRuns() {
     var list = runs.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
-    $('runs').innerHTML = list.length ? '<div class="c6-table-wrap"><table class="c6-table"><caption class="c6-sr-only">FAIR 模擬紀錄</caption><thead><tr><th scope="col">Run</th><th scope="col">時間</th><th scope="col">風險情境</th><th scope="col" class="c6-t-num">Iterations</th><th scope="col" class="c6-t-num">Seed</th><th scope="col">引擎</th><th scope="col" class="c6-t-num">ALE Mean</th><th scope="col" class="c6-t-num">P90</th><th scope="col">來源</th><th scope="col">操作</th></tr></thead><tbody>' +
+    $('runs').innerHTML = list.length ? '<div class="c6-table-wrap"><table class="c6-table"><caption class="c6-sr-only">FAIR 模擬紀錄</caption><thead><tr><th scope="col">Run</th><th scope="col">時間</th><th scope="col">Scenario</th><th scope="col">風險</th><th scope="col" class="c6-t-num">Iterations</th><th scope="col" class="c6-t-num">Seed</th><th scope="col">引擎</th><th scope="col" class="c6-t-num">ALE Mean</th><th scope="col" class="c6-t-num">P90</th><th scope="col">來源</th><th scope="col">操作</th></tr></thead><tbody>' +
       list.map(function (r) {
         var ar = r.summaries.AnnualRisk;
-        return '<tr><td>' + esc(r.id) + '</td><td>' + esc((r.at || '').replace('T', ' ').slice(0, 16)) + '</td><td>' + esc(riskName(r.riskId)) + '</td><td class="c6-t-num">' + F.num(r.iterations) + '</td><td class="c6-t-num">' + r.seed + '</td><td>' + (r.engine === 'worker' ? 'Web Worker' : '主執行緒') + '</td><td class="c6-t-num">' + F.currency(ar.Mean) + '</td><td class="c6-t-num">' + F.currency(ar.P90) + '</td><td>' + P.badge('CALCULATED') + (r.defaultsUsed ? ' ' + PG.chip('含預設值', 'warn') : '') + '</td><td><button type="button" class="c6-btn c6-btn--ghost c6-btn--sm" data-show="' + esc(r.id) + '">顯示</button> <button type="button" class="c6-btn c6-btn--ghost c6-btn--sm" data-del="' + esc(r.id) + '" aria-label="刪除 ' + esc(r.id) + '">刪除</button></td></tr>';
+        return '<tr><td>' + esc(r.id) + '</td><td>' + esc((r.at || '').replace('T', ' ').slice(0, 16)) + '</td><td>' + esc(FS.scenarioOf(r, scenarios) + (r.scenarioName ? ' · ' + r.scenarioName : '')) + '</td><td>' + esc(r.riskId || '—') + '</td><td class="c6-t-num">' + F.num(r.iterations) + '</td><td class="c6-t-num">' + r.seed + '</td><td>' + (r.engine === 'worker' ? 'Web Worker' : '主執行緒') + '</td><td class="c6-t-num">' + F.currency(ar.Mean) + '</td><td class="c6-t-num">' + F.currency(ar.P90) + '</td><td>' + P.badge('CALCULATED') + (r.defaultsUsed ? ' ' + PG.chip('含預設值', 'warn') : '') + '</td><td><button type="button" class="c6-btn c6-btn--ghost c6-btn--sm" data-show="' + esc(r.id) + '">顯示</button> <button type="button" class="c6-btn c6-btn--ghost c6-btn--sm" data-del="' + esc(r.id) + '" aria-label="刪除 ' + esc(r.id) + '">刪除</button></td></tr>';
       }).join('') + '</tbody></table></div>' : '<div class="c6-empty">尚無模擬紀錄。執行一次模擬後會自動保存摘要。</div>';
   }
   $('runs').addEventListener('click', function (e) {
@@ -165,7 +176,7 @@
   /* ---- Results ---- */
   function renderResults() {
     var r = state.result, s = r.summaries, ar = s.AnnualRisk, money = function (v) { return F.currency(v, 'TWD', { compact: true }); };
-    $('run-meta').textContent = riskName(r.riskId) + ' · ' + F.num(r.iterations) + ' 次 · seed ' + r.seed + (r.engine ? ' · ' + (r.engine === 'worker' ? 'Web Worker' : '主執行緒') : '') + (r.inputs.some(function (f) { return f.source === 'CAT6_DEFAULT'; }) ? ' · 含 CAT.6 預設值' : '');
+    $('run-meta').textContent = (r.scenarioId ? r.scenarioId + ' ' + (r.scenarioName || '') + ' · ' : '') + riskName(r.riskId) + ' · ' + F.num(r.iterations) + ' 次 · seed ' + r.seed + (r.engine ? ' · ' + (r.engine === 'worker' ? 'Web Worker' : '主執行緒') : '') + (r.inputs.some(function (f) { return f.source === 'CAT6_DEFAULT'; }) ? ' · 含 CAT.6 預設值' : '');
     $('res-prov').innerHTML = P.badge('CALCULATED');
     var k = [
       ['TEF · P50', s.TEF.P50.toFixed(2), '次/年', false], ['LEF · P50', s.LEF.P50.toFixed(2), '次/年', false],
@@ -258,7 +269,68 @@
     $('risk-sel').innerHTML = opts.join('');
     $('risk-link').href = 'risk-register.html?id=' + encodeURIComponent(state.riskId);
   }
-  $('risk-sel').addEventListener('change', function (e) { state.riskId = e.target.value; renderRiskSel(); persist('已將 FAIR 輸入指派到 ' + state.riskId); });
+  $('risk-sel').addEventListener('change', function (e) { state.riskId = e.target.value; renderRiskSel(); persist('已將 ' + state.scn + ' 指派到 ' + state.riskId); });
+  $('scn-name').addEventListener('change', function (e) { state.name = e.target.value.trim(); persist(); });
+  $('scn-cur').addEventListener('change', function (e) { state.currency = e.target.value; persist('幣別已改為 ' + state.currency + '（僅影響顯示與情境比較，不換算金額）'); });
+
+  /* ---- Scenarios (1…N) ---- */
+  function renderScenarioSel() {
+    var list = scenarios.slice().sort(function (a, b) { return String(a.scenarioId).localeCompare(String(b.scenarioId)); });
+    $('scn-sel').innerHTML = list.map(function (x) { var id = x.scenarioId || x.id; return '<option value="' + esc(id) + '"' + (id === state.scn ? ' selected' : '') + '>' + esc(id + ' · ' + (x.scenarioName || riskName(x.riskId)) + ' · ' + (x.riskId || '—')) + '</option>'; }).join('') ||
+      '<option value="' + esc(state.scn) + '" selected>' + esc(state.scn + '（尚未儲存）') + '</option>';
+    $('scn-name').value = state.name || ''; $('scn-cur').value = state.currency || 'TWD';
+    $('scn-del').disabled = scenarios.length === 0;
+  }
+  function latestRunOf(id) { return runs.filter(function (r) { return FS.scenarioOf(r, scenarios) === id; }).sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); })[0]; }
+  function showRun(r) { state.result = Object.assign({}, r, { inputs: (r.inputs || []).map(function (i) { var df = DEF.fields.filter(function (f) { return f.field === i.field; })[0] || {}; return Object.assign({}, df, i); }) }); renderResults(); }
+  function selectScenario(id) {
+    var rec = scenarios.filter(function (x) { return (x.scenarioId || x.id) === id; })[0];
+    saved = rec || null; fromRecord(rec); validateFields(); renderAll(); renderRiskSel(); renderScenarioSel();
+    $('in-prov').innerHTML = P.badge(rec ? rec.source : 'CAT6_DEFAULT');
+    var last = latestRunOf(id);
+    if (last) { showRun(last); setState('done', '顯示 ' + id + ' 最近一次保存的 ' + last.id); } else { state.result = null; ['kpis', 'hist', 'hist-sum', 'components', 'exc', 'exc-sum', 'point', 'ptable', 'run-meta'].forEach(function (k) { var el = $(k); if (el) el.innerHTML = ''; }); $('export').disabled = true; $('export-x').disabled = true; setState('idle', id + ' 尚未執行模擬'); }
+    history.replaceState(null, '', '?scenario=' + encodeURIComponent(id));
+  }
+  $('scn-sel').addEventListener('change', function (e) { if (job) { C.util.dom.toast('模擬進行中；結果仍會保存到原情境。'); } selectScenario(e.target.value); });
+  $('scn-add').addEventListener('click', function () {
+    var used = {}; scenarios.forEach(function (x) { used[x.riskId] = 1; });
+    var r = risks.filter(function (x) { return !used[x.id]; })[0] || risks[0], id = FS.nextId(scenarios);
+    resetDefaults(); saved = null; state.scn = id; state.riskId = r ? r.id : DEF.scenario.id; state.name = r ? r.scenario : ''; state.currency = 'TWD';
+    persist('已新增情境 ' + id + '（輸入值為 CAT.6 預設值，請改為組織資料）').then(function () { selectScenario(id); });
+  });
+  $('scn-del').addEventListener('click', function () {
+    var id = state.scn, mine = runs.filter(function (r) { return FS.scenarioOf(r, scenarios) === id; });
+    C.ui.form.confirm('刪除情境 ' + id + ' 及其 ' + mine.length + ' 筆模擬紀錄？', '刪除').then(function (ok) {
+      if (!ok) return;
+      return Promise.all([W.remove('fairInputs', id)].concat(mine.map(function (r) { return W.remove('fairRuns', r.id); }))).then(function () {
+        scenarios = scenarios.filter(function (x) { return (x.scenarioId || x.id) !== id; }); runs = runs.filter(function (r) { return mine.indexOf(r) < 0; });
+        renderRuns(); if (scenarios.length) selectScenario(scenarios[0].scenarioId || scenarios[0].id); else { resetDefaults(); state.scn = FS.nextId([]); renderAll(); renderScenarioSel(); }
+      });
+    });
+  });
+  /* Run every scenario in sequence — one independent Worker / seed per scenario; results are keyed by scenarioId. */
+  $('run-all').addEventListener('click', function () {
+    var list = scenarios.slice(), btn = $('run-all'), done = 0, failed = [];
+    if (!list.length) return;
+    btn.disabled = true; $('run').disabled = true;
+    list.reduce(function (p, sc) {
+      return p.then(function () {
+        var inp = {}; (sc.fields || []).forEach(function (f) { inp[f.field] = f.value; });
+        var seed = sc.seed != null ? sc.seed : state.seed, iters = state.iterations;
+        var ident = { scenarioId: sc.scenarioId || sc.id, scenarioName: sc.scenarioName || riskName(sc.riskId), riskId: sc.riskId, currency: sc.currency || 'TWD' };
+        setState('running', '執行 ' + ident.scenarioId + '（' + (done + 1) + ' / ' + list.length + '）· ' + F.num(iters) + ' 次 · seed ' + seed);
+        var j = C.services.fair.start(inp, { iterations: iters, seed: seed }, function () {});
+        return j.promise.then(function (res) {
+          res.inputs = (sc.fields || []).map(function (f) { var df = DEF.fields.filter(function (x) { return x.field === f.field; })[0] || {}; return Object.assign({}, df, f); });
+          Object.assign(res, ident); done++; return saveRun(res);
+        }, function (e) { failed.push(ident.scenarioId + '：' + (e.errors ? e.errors.map(function (x) { return x.field; }).join(', ') : e.message)); });
+      });
+    }, Promise.resolve()).then(function () {
+      btn.disabled = false; $('run').disabled = false;
+      selectScenario(state.scn);
+      setState(failed.length ? 'error' : 'done', '已完成 ' + done + ' / ' + list.length + ' 個情境' + (failed.length ? '；失敗：' + failed.join('；') : '') + '；目前顯示 ' + state.scn);
+    });
+  });
   $('save-inputs').addEventListener('click', function () { if (!validateFields()) { renderInputs(); $('save-status').textContent = '輸入值有誤，未儲存。'; return; } persist(); });
 
   function renderAll() { renderNotice(); renderInputs(); renderAssumptions(); }
@@ -266,14 +338,12 @@
   PG.boot({ nav: 'fair' }, function (w) {
     W = w;
     return W.load(['risks', 'fairInputs', 'fairRuns']).then(function (d) {
-      risks = d.risks; runs = d.fairRuns; saved = d.fairInputs[0] || null;
-      var q = new URLSearchParams(location.search).get('risk');
-      fromRecord(saved);
-      if (q && risks.some(function (r) { return r.id === q; })) state.riskId = q;
-      $('in-prov').innerHTML = P.badge(saved ? saved.source : 'CAT6_DEFAULT');
-      validateFields(); renderAll(); renderRiskSel(); renderRuns(); setState('idle', '尚未執行');
-      var last = runs.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); })[0];
-      if (last) { state.result = Object.assign({}, last, { inputs: last.inputs.map(function (i) { var df = DEF.fields.filter(function (f) { return f.field === i.field; })[0] || {}; return Object.assign({}, df, i); }) }); renderResults(); setState('done', '顯示最近一次保存的 ' + last.id); }
+      risks = d.risks; runs = d.fairRuns; scenarios = d.fairInputs.map(FS.scenario);
+      var q = new URLSearchParams(location.search), qs = q.get('scenario'), qr = q.get('risk');
+      var pick = scenarios.filter(function (x) { return (x.scenarioId || x.id) === qs; })[0] || (qr && scenarios.filter(function (x) { return x.riskId === qr; })[0]) || scenarios[0];
+      renderRuns();
+      if (pick) selectScenario(pick.scenarioId || pick.id);
+      else { fromRecord(null); state.scn = 'fair'; if (qr && risks.some(function (r) { return r.id === qr; })) state.riskId = qr; $('in-prov').innerHTML = P.badge('CAT6_DEFAULT'); validateFields(); renderAll(); renderRiskSel(); renderScenarioSel(); setState('idle', '尚未執行'); }
     });
   });
 })(globalThis.CAT6);

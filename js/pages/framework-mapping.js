@@ -18,7 +18,7 @@
       if (t.refs && (t.refs.iso || []).length) add('ISO27001', '處理計畫對應 Annex A');
       if (t.refs && (t.refs.csf || []).length) add('CSF2', '處理計畫對應 CSF');
       if (t.refs && (t.refs.cis || []).length) add('CISV81', '處理計畫對應 CIS');
-      if (t.refs && t.refs.cisram) add('CISRAM', '處理計畫對應 CIS RAM');
+      if (t.refs && (t.refs.cisram || []).length) add('CISRAM', '處理計畫對應 CIS RAM');
     });
     Object.keys(out).forEach(function (k) { out[k] = out[k].filter(function (x, i, a) { return a.indexOf(x) === i; }); });
     return out;

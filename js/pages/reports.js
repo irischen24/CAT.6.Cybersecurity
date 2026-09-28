@@ -12,6 +12,7 @@
   function layout() {
     document.getElementById('page').innerHTML =
       '<div class="c6-intro"><h2 class="c6-intro__title">Report Center 報告中心</h2><p class="c6-intro__text">報告由結構化結果資料產生（Report Data Builder → Report Renderer），不是儀表板截圖。PDF 透過瀏覽器列印產生：A4、頁首頁尾、頁碼、跨頁重複表頭，並保留每一筆資料的來源標示。</p></div>' +
+      '<div id="fmt-issues"></div>' +
       '<div class="c6-grid">' +
       P.card('rt', '1 · 選擇報告類型', '9 種報告 · 目前評估：<span id="r-as"></span>', '<ul class="c6-rtypes" id="types"></ul>' +
         '<div class="c6-row" id="fair-pick" hidden style="margin-top:1rem;gap:.75rem;flex-wrap:wrap;align-items:flex-end"><label class="c6-field" style="min-width:18rem;flex:1"><span class="c6-var__lbl">FAIR 詳細情境（報告中的百分位、分布圖與超越曲線）</span><select class="c6-input" id="fair-run"></select></label>' +
@@ -54,6 +55,14 @@
     document.getElementById('r-status').textContent = r.title + ' · ' + r.sections.filter(function (s) { return s.status !== 'NOT_APPLICABLE'; }).length + ' 個章節';
   }
 
+  /* Values the normalization layer could not interpret: the report still renders (they are treated as empty) and the
+   * exact record / field / received type is listed so the data can be corrected at the source. */
+  function renderFormatIssues(list) {
+    var box = document.getElementById('fmt-issues');
+    box.innerHTML = !list.length ? '' : '<div class="c6-callout c6-callout--warn" role="alert" style="margin-bottom:1rem"><strong>Data Format Error</strong>：' + list.length + ' 個欄位無法解析，報告中以空值處理。' +
+      '<div class="c6-table-wrap" style="margin-top:.5rem"><table class="c6-table"><thead><tr><th scope="col">Dataset</th><th scope="col">Record ID</th><th scope="col">Field</th><th scope="col">Received Type</th><th scope="col">Received</th></tr></thead><tbody>' +
+      list.map(function (i) { return '<tr><td>' + esc(i.collection) + '</td><td>' + esc(i.recordId) + '</td><td>' + esc(i.field) + '</td><td><code>' + esc(i.receivedType) + '</code></td><td><code>' + esc(i.received) + '</code></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  }
   /* The report on screen / to print: the frozen finalized record being viewed, else the live draft. */
   function shown() { return state.view ? RI.reportFromRecord(state.view) : state.report; }
   function showPreview() {
@@ -139,6 +148,7 @@
     renderTypes();
     return Promise.all([W.load(RB.COLLECTIONS), RI.list()]).then(function (res) {
       var d = res[0]; state.data = d; state.registry = res[1];
+      renderFormatIssues(d.__formatIssues || []);
       state.view = wantReport ? state.registry.filter(function (r) { return r.reportUuid === wantReport; })[0] || null : null;
       renderRegistry();
       build();

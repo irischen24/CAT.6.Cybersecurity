@@ -44,7 +44,7 @@
           { key: 'scenario', label: 'Scenario', wrap: true, get: function (t) { var r = d.byId[t.riskId]; return r ? r.scenario : '(已刪除)'; } },
           { key: 'cur', label: 'Current Risk', get: function (t) { var r = d.byId[t.riskId], a = r && sc(r.likelihood, r.impact); return a ? a.score : null; }, render: function (t) { var r = d.byId[t.riskId]; return r ? P.score(r.likelihood, r.impact) : P.dataRequired(); } },
           { key: 'strategy', label: 'Strategy' }, { key: 'control', label: 'Selected Control', wrap: true },
-          { key: 'refs', label: 'Mappings', get: function (t) { var f = t.refs || {}; return [].concat(f.iso || [], f.csf || [], f.cis || [], f.cisram ? [f.cisram] : []).join(' '); }, render: function (t) { var f = t.refs || {}; return [f.iso && f.iso.length ? 'ISO ' + P.chips(f.iso) : '', f.csf && f.csf.length ? 'CSF ' + P.chips(f.csf) : '', f.cis && f.cis.length ? 'CIS ' + P.chips(f.cis) : '', f.cisram ? 'RAM ' + P.chip(f.cisram) : ''].filter(Boolean).join('<br>') || '<span class="c6-muted">—</span>'; } },
+          { key: 'refs', label: 'Mappings', get: function (t) { var f = t.refs || {}; return [].concat(f.iso || [], f.csf || [], f.cis || [], f.cisram || []).join(' '); }, render: function (t) { var f = t.refs || {}; return [f.iso && f.iso.length ? 'ISO ' + P.chips(f.iso) : '', f.csf && f.csf.length ? 'CSF ' + P.chips(f.csf) : '', f.cis && f.cis.length ? 'CIS ' + P.chips(f.cis) : '', f.cisram ? 'RAM ' + P.chip(f.cisram) : ''].filter(Boolean).join('<br>') || '<span class="c6-muted">—</span>'; } },
           { key: 'framework', label: 'Framework', get: function (t) { return P.fwShort(t.framework); } }, { key: 'owner', label: 'Owner' }, { key: 'priority', label: 'Priority' }, { key: 'dueDate', label: 'Due' },
           { key: 'status', label: 'Status', get: function (t) { return T.classify(t); }, render: function (t) { var c = CLS[T.classify(t)]; return esc(t.status) + '<br>' + P.chip(c[2] + ' ' + c[0], c[1]); } },
           { key: 'res', label: 'Residual', get: function (t) { var r = d.byId[t.riskId], a = r && sc(r.residualLikelihood, r.residualImpact); return a ? a.score : null; }, render: function (t) { var r = d.byId[t.riskId]; return r && sc(r.residualLikelihood, r.residualImpact) ? P.score(r.residualLikelihood, r.residualImpact) : P.dataRequired('尚未評估殘餘風險'); } },
@@ -63,7 +63,7 @@
     });
     function edit(t, riskId) {
       var isNew = !t, r0 = t ? d.byId[t.riskId] : d.byId[riskId];
-      var v = t ? Object.assign({}, t, { iso: (t.refs || {}).iso || [], csf: (t.refs || {}).csf || [], cis: (t.refs || {}).cis || [], cisram: (t.refs || {}).cisram || '' }) : { riskId: riskId || '', strategy: 'Mitigate', status: 'Planned', priority: 'P2', iso: [], csf: [], cis: [] };
+      var v = t ? Object.assign({}, t, { iso: (t.refs || {}).iso || [], csf: (t.refs || {}).csf || [], cis: (t.refs || {}).cis || [], cisram: ((t.refs || {}).cisram || [])[0] || '' }) : { riskId: riskId || '', strategy: 'Mitigate', status: 'Planned', priority: 'P2', iso: [], csf: [], cis: [] };
       if (r0) { v.residualLikelihood = r0.residualLikelihood; v.residualImpact = r0.residualImpact; }
       C.ui.form.open({ title: isNew ? '新增處理計畫' : '編輯 ' + t.id, subtitle: '殘餘 L / I 會寫回風險登錄表', values: v, fields: [
         { key: 'riskId', label: 'Risk ID', type: 'select', required: true, options: P.riskOptions(d.risks), full: true },
@@ -80,7 +80,7 @@
       ], validate: function (x) { var e = {}; if ((x.residualLikelihood == null) !== (x.residualImpact == null)) e.residualImpact = '殘餘 L 與 I 需同時填寫'; if (x.strategy === 'Mitigate' && !x.iso.length && !x.csf.length && !x.cis.length) e.cis = 'Mitigate 請至少對應一項控制（ISO / CSF / CIS）'; return e; } })
         .then(function (x) {
           if (!x) return;
-          var rec = Object.assign({}, t || {}, { riskId: x.riskId, strategy: x.strategy, framework: x.framework, control: x.control, owner: x.owner, priority: x.priority, dueDate: x.dueDate, status: x.status, refs: { iso: x.iso, csf: x.csf, cis: x.cis, cisram: x.cisram || '' } });
+          var rec = Object.assign({}, t || {}, { riskId: x.riskId, strategy: x.strategy, framework: x.framework, control: x.control, owner: x.owner, priority: x.priority, dueDate: x.dueDate, status: x.status, refs: { iso: x.iso || [], csf: x.csf || [], cis: x.cis || [], cisram: x.cisram ? [x.cisram] : [] } });
           if (isNew) rec.id = D.nextId('TR', d.treatments);
           var r = d.byId[x.riskId], jobs = [W.save('treatments', rec, { verb: isNew ? '新增' : '更新' })];
           if (r && (r.residualLikelihood !== x.residualLikelihood || r.residualImpact !== x.residualImpact || r.treatment !== x.strategy))
