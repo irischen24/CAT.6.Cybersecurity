@@ -40,8 +40,8 @@ python3 -m http.server 8000     # 然後開 http://localhost:8000/
 
 ## 測試
 ```bash
-node tests/run-tests.js      # 125 項：引擎、匯入驗證、XLSX、Workspace、9 種報告、Worker 決定性
-python3 tests/e2e.py         # 224 項（Playwright + Chromium）：17 頁 × 3 寬度、連結、CRUD、匯入、匯出、Worker、PDF
+node tests/run-tests.js      # 157 項：引擎、匯入驗證、XLSX、Workspace、9 種報告、Worker 決定性
+python3 tests/e2e.py         # 276 項（Playwright + Chromium）：17 頁 × 3 寬度、連結、CRUD、匯入、匯出、Worker、PDF
 ```
 e2e 產物（截圖、範例 PDF、結果 JSON）寫到 `$E2E_OUT`（預設系統暫存資料夾的 `cat6-e2e/`）。
 
@@ -51,4 +51,4 @@ e2e 產物（截圖、範例 PDF、結果 JSON）寫到 `$E2E_OUT`（預設系�
 
 ## 文件
 `docs/ARCHITECTURE.md`（架構、資料模型、匯入 / 報告管線）· `docs/METHODOLOGY-NOTES.md`（方法論決策、待確認事項）·
-`docs/DEFAULTS.md`（預設值與採用依據）· `docs/BACKEND.md`（Supabase）· `docs/DESIGN-RATIONALE.md` · `docs/REFERENCES.md`
+`docs/REPORT-INTEGRITY.md`（正式報告：分級、Report ID、SHA-256、驗證）· `docs/DEFAULTS.md`（預設值與採用依據）· `docs/BACKEND.md`（Supabase）· `docs/DESIGN-RATIONALE.md` · `docs/REFERENCES.md`
