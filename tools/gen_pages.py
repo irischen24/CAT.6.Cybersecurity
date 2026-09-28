@@ -35,6 +35,7 @@ TPL='''<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* Before first paint: theme class + initial sidebar view (no layout jump). Breakpoints match js/ui/shell.js. */(function(d){{d.classList.add("c6-doc");var w=window.innerWidth,p=null;try{{p=localStorage.getItem("cat6:ui:side")}}catch(e){{}}d.setAttribute("data-side-view",w>=1200?(p==="collapsed"?"rail":"full"):w>=768?"rail":"hidden")}})(document.documentElement)</script>
 <title>{title} · CAT.6 Cybersecurity</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
