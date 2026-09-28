@@ -1,0 +1,27 @@
+/* CAT.6 public Report Verification page — same tokens as the app (dark, graphite, purple accent). */
+.c6-verify-page { min-height: 100dvh; color: var(--c6-fg); font-family: var(--c6-font); }
+.c6-vhead { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--c6-border); background: rgba(5,5,6,0.72); }
+.c6-vbrand { display: inline-flex; align-items: center; gap: .6rem; color: var(--c6-fg); text-decoration: none; font-weight: 600; }
+.c6-vbrand svg { width: 24px; height: 24px; }
+.c6-vhead__t { color: var(--c6-fg-muted); font-size: var(--c6-fs-sm); }
+.c6-vmain { box-sizing: border-box; max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; display: grid; gap: 1.25rem; }
+.c6-vtitle { margin: 0; font-size: var(--c6-fs-2xl); letter-spacing: -0.01em; }
+.c6-vform { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
+.c6-vform .c6-field { flex: 1 1 14rem; }
+.c6-vstatus { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-radius: var(--c6-r-xl); border: 1px solid var(--c6-border-hover); background: var(--c6-surface); }
+.c6-vstatus__k { color: var(--c6-fg-muted); font-size: var(--c6-fs-sm); }
+.c6-vstatus__v { font-size: var(--c6-fs-xl); letter-spacing: .06em; }
+.c6-vstatus--ok { border-color: var(--c6-sev-low); } .c6-vstatus--ok .c6-vstatus__v { color: var(--c6-sev-low); }
+.c6-vstatus--warn { border-color: var(--c6-sev-medium); } .c6-vstatus--warn .c6-vstatus__v { color: var(--c6-sev-medium); }
+.c6-vstatus--bad { border-color: var(--c6-sev-critical); } .c6-vstatus--bad .c6-vstatus__v { color: var(--c6-sev-critical); }
+.c6-vkv { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .75rem 1.5rem; margin: 0; }
+.c6-vkv div { min-width: 0; border-bottom: 1px solid var(--c6-border); padding-bottom: .4rem; }
+.c6-vkv dt { color: var(--c6-fg-muted); font-size: var(--c6-fs-xs); }
+.c6-vkv dd { margin: .15rem 0 0; overflow-wrap: anywhere; }
+.c6-vmono { font-family: var(--c6-mono); font-size: var(--c6-fs-xs); word-break: break-all; }
+.c6-vh2 { margin: .5rem 0 0; font-size: var(--c6-fs-base); }
+.c6-vchecks { margin: 0; padding: 0; list-style: none; display: grid; gap: .4rem; }
+.c6-vchecks li { display: flex; gap: .6rem; align-items: baseline; font-size: var(--c6-fs-sm); }
+.c6-vchecks li span { flex: none; width: 1.2em; font-weight: 700; }
+.c6-vchecks .ok span { color: var(--c6-sev-low); } .c6-vchecks .bad span { color: var(--c6-sev-critical); } .c6-vchecks .wait span { color: var(--c6-sev-medium); }
+.c6-vfoot { border-top: 1px solid var(--c6-border); padding-top: 1rem; }
