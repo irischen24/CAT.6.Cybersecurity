@@ -1,10 +1,13 @@
 /* Number / currency formatting. Currency is a parameter so more currencies can be added later. */
 (function (C) {
   var CURRENCIES = {
-    TWD: { symbol: 'NT$', locale: 'zh-TW', decimals: 0 }
+    TWD: { symbol: 'NT$', locale: 'zh-TW', decimals: 0 },
+    USD: { symbol: 'US$', locale: 'en-US', decimals: 0 },
+    EUR: { symbol: '€', locale: 'de-DE', decimals: 0 },
+    JPY: { symbol: '¥', locale: 'ja-JP', decimals: 0 }
   };
   function currency(value, code, opts) {
-    var cur = CURRENCIES[code || 'TWD'];
+    var cur = CURRENCIES[code || 'TWD'] || { symbol: String(code) + ' ', locale: 'en-US', decimals: 0 };
     if (value == null || isNaN(value)) return '—';
     if (opts && opts.compact) {
       var abs = Math.abs(value);
