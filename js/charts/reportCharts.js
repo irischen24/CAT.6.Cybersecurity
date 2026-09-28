@@ -62,6 +62,30 @@
     });
     return s.join('') + '</svg>';
   }
+  /* FAIR scenario comparison: per row a P50→P95 band, P90 tick, Mean diamond, P50 circle (currency axis from 0). */
+  function ranges(rows, opts) {
+    opts = opts || {};
+    var W = 640, lw = 150, row = 30, top = 8, H = top + rows.length * row + 48, iw = W - lw - 24;
+    var max = Math.max.apply(null, rows.map(function (r) { return r.p95 || 0; }).concat([1]));
+    var nice = C.charts.svg && C.charts.svg.niceMax ? C.charts.svg.niceMax(max) : max, X = function (v) { return lw + iw * v / nice; };
+    var cur = function (v) { return C.util.format.currency(v, 'TWD', { compact: true }); };
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" class="c6r-svg" role="img" aria-label="' + esc(opts.label || 'FAIR scenario comparison') + '">'];
+    for (var k = 0; k <= 4; k++) { var v = nice * k / 4; s.push('<line x1="' + X(v) + '" x2="' + X(v) + '" y1="' + top + '" y2="' + (top + rows.length * row) + '" stroke="#E2E2EA"/><text x="' + X(v) + '" y="' + (top + rows.length * row + 14) + '" font-size="9" text-anchor="middle" fill="#555">' + cur(v) + '</text>'); }
+    rows.forEach(function (r, i) {
+      var y = top + i * row + row / 2;
+      s.push('<text x="' + (lw - 8) + '" y="' + (y + 4) + '" font-size="10" text-anchor="end" fill="#333">' + esc(r.label) + '</text>');
+      s.push('<rect x="' + X(r.p50) + '" y="' + (y - 6) + '" width="' + Math.max(1, X(r.p95) - X(r.p50)) + '" height="12" fill="#DCD6FF" stroke="#8C7BFF"/>');
+      s.push('<line x1="' + X(r.p90) + '" x2="' + X(r.p90) + '" y1="' + (y - 9) + '" y2="' + (y + 9) + '" stroke="#C8561E" stroke-width="2"/>');
+      s.push('<circle cx="' + X(r.p50) + '" cy="' + y + '" r="4" fill="#fff" stroke="#3D2FA0" stroke-width="1.5"/>');
+      s.push(marker('diamond', X(r.mean), y, 4.5, '#3D2FA0'));
+    });
+    var ly = top + rows.length * row + 32;
+    s.push('<circle cx="' + lw + '" cy="' + (ly - 3) + '" r="4" fill="#fff" stroke="#3D2FA0" stroke-width="1.5"/><text x="' + (lw + 8) + '" y="' + ly + '" font-size="9" fill="#333">P50</text>');
+    s.push(marker('diamond', lw + 52, ly - 3, 4.5, '#3D2FA0') + '<text x="' + (lw + 60) + '" y="' + ly + '" font-size="9" fill="#333">Mean (ALE)</text>');
+    s.push('<line x1="' + (lw + 134) + '" x2="' + (lw + 134) + '" y1="' + (ly - 10) + '" y2="' + (ly + 3) + '" stroke="#C8561E" stroke-width="2"/><text x="' + (lw + 140) + '" y="' + ly + '" font-size="9" fill="#333">P90</text>');
+    s.push('<rect x="' + (lw + 176) + '" y="' + (ly - 8) + '" width="18" height="10" fill="#DCD6FF" stroke="#8C7BFF"/><text x="' + (lw + 199) + '" y="' + ly + '" font-size="9" fill="#333">P50–P95 區間</text>');
+    return s.join('') + '</svg>';
+  }
   function histogram(h, summary) {
     var W = 640, H = 200, m = { l: 40, r: 10, t: 10, b: 30 }, iw = W - m.l - m.r, ih = H - m.t - m.b, max = Math.max.apply(null, h.counts), bw = iw / h.counts.length;
     var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" class="c6r-svg" role="img" aria-label="Annual risk distribution">'];
@@ -83,5 +107,5 @@
     for (var k = 0; k <= 4; k++) { var v = lo + (hi - lo) * k / 4; s.push('<text x="' + X(v) + '" y="' + (H - 10) + '" font-size="9" text-anchor="middle" fill="#555">' + C.util.format.currency(v, 'TWD', { compact: true }) + '</text>'); }
     return s.join('') + '</svg>';
   }
-  C.charts.report = { matrix: matrix, hbars: hbars, compare: compare, histogram: histogram, exceedance: exceedance, SEV: SEV };
+  C.charts.report = { ranges: ranges, matrix: matrix, hbars: hbars, compare: compare, histogram: histogram, exceedance: exceedance, SEV: SEV };
 })(globalThis.CAT6);
