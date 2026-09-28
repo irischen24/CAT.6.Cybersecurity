@@ -8,15 +8,15 @@ globalThis.window = globalThis;
 const load = f => vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
 /* Same script order as the app pages (tools/gen_pages.py CORE) minus pure-DOM UI modules. */
 [
-  'js/core/namespace.js', 'js/config.js', 'js/core/format.js', 'js/core/provenance.js', 'js/core/dom.js', 'js/core/repository.js', 'data/compliance.js',
+  'js/core/namespace.js', 'js/config.js', 'js/core/format.js', 'js/core/provenance.js', 'js/core/dom.js', 'js/core/normalize.js', 'js/core/repository.js', 'data/compliance.js',
   'data/risk-criteria.js', 'data/frameworks.js', 'data/references.js', 'data/nist-likelihood.js',
   'data/catalog/iso27001.js', 'data/catalog/csf2.js', 'data/catalog/cis-controls.js', 'data/catalog/nist-impact-risk.js', 'data/catalog/framework-library.js', 'data/catalog/framework-mapping.js',
   'data/defaults/meta.js', 'data/defaults/workspace-defaults.js', 'data/defaults/risk-defaults.js', 'data/defaults/nist-defaults.js', 'data/defaults/cis-ram-defaults.js',
-  'data/defaults/cis-controls-defaults.js', 'data/defaults/nist-csf-defaults.js', 'data/defaults/iso-readiness-defaults.js', 'data/defaults/fair-defaults.js', 'data/defaults/parameters.js',
+  'data/defaults/cis-controls-defaults.js', 'data/defaults/nist-csf-defaults.js', 'data/defaults/iso-readiness-defaults.js', 'data/defaults/fair-defaults.js', 'data/defaults/parameters.js', 'js/services/fairScenarios.js',
   'js/calculations/rng.js', 'js/calculations/distributions.js', 'js/calculations/stats.js', 'js/calculations/riskMatrixEngine.js', 'js/calculations/nistRiskEngine.js', 'js/calculations/cisRamEngine.js',
   'js/calculations/cisControlsEngine.js', 'js/calculations/csfEngine.js', 'js/calculations/treatmentEngine.js', 'js/calculations/isoReadinessEngine.js', 'js/calculations/fairMonteCarloEngine.js',
   'js/services/workspace.js', 'js/services/xlsx.js', 'js/services/exportService.js', 'js/services/csvImportService.js', 'js/services/importCenter.js',
-  'js/services/fairAnalysisService.js', 'js/charts/svg.js', 'js/charts/reportCharts.js', 'js/services/reportBuilder.js', 'js/services/qr.js', 'js/services/reportIntegrity.js', 'js/services/reportRenderer.js'
+  'js/services/fairAnalysisService.js', 'js/charts/svg.js', 'js/charts/reportCharts.js', 'js/services/reportBuilder.js', 'js/services/qr.js', 'js/services/reportIntegrity.js', 'js/services/reportRenderer.js', 'js/services/dashboardModel.js'
 ].forEach(load);
 const C = globalThis.CAT6;
 let pass = 0, fail = 0;
@@ -209,13 +209,81 @@ t('Reports list defaults with basis', RR.render(RB.build('combined', data, {})).
     t('FAIR summary: one row per scenario, latest run each, sorted by ALE', per.length === 2 && per[0].id === 'RUN-B1' && per[1].id === 'RUN-A2');
     const rep = RB.build('fair', dd, {}), h = RR.render(rep);
     t('FAIR report lists every scenario with Mean/P50/P90/P95 + comparison chart', h.includes('FAIR 情境彙總') && h.includes('RUN-B1') && h.includes('RUN-A2') && !h.includes('RUN-A1') && h.includes('各情境年化風險比較') && h.includes('P95'));
-    t('FAIR detail defaults to newest run', rep.fairRunId === 'RUN-A2' && h.includes('情境詳細：RS-A'));
+    t('FAIR: every scenario has its own Detailed Scenario section (legacy runs matched to the scenario of their risk)', h.includes('FAIR Detailed Scenario — LEGACY-RS-A') && h.includes('FAIR Detailed Scenario — fair'));
     const rep2 = RB.build('fair', dd, { fairRunId: 'RUN-B1' });
-    t('FAIR detail follows the selected run', rep2.fairRunId === 'RUN-B1' && RR.render(rep2).includes('情境詳細：RS-B'));
+    const rep3 = RB.build('fair', dd, { fairRunId: 'RUN-A1' }), h3 = RR.render(rep3);
+    t('FAIR picker overrides the run used for that scenario only', h3.includes('RUN-A1') && !h3.includes('RUN-A2') && h3.includes('RUN-B1'));
     t('FAIR selected run unknown → falls back to newest', RB.build('fair', dd, { fairRunId: 'NOPE' }).fairRunId === 'RUN-A2');
     t('FAIR summary exported to CSV/XLSX tables', RB.toTables(rep).some(x => /FAIR 情境彙總/.test(x.name) && x.rows.length === 2));
   }
 
+  // ---- Normalization layer (root cause: treatments.refs.cisram stored as a string by the Treatment form)
+  {
+    const N = C.util.normalize, RB = C.services.reportBuilder, RR = C.services.reportRenderer;
+    t('normalize: array kept', JSON.stringify(N.toList(['A.5.1', ' A.8.20 ']).value) === '["A.5.1","A.8.20"]');
+    t('normalize: string split (; , | " / ")', JSON.stringify(N.toList('CIS-11 / CIS-12; CIS-17').value) === '["CIS-11","CIS-12","CIS-17"]');
+    t('normalize: JSON string parsed', JSON.stringify(N.toList('["PR.IR","PR.DS"]').value) === '["PR.IR","PR.DS"]');
+    t('normalize: object {id} / {x:true} / array-like', N.toList({ id: 'CR-001' }).value[0] === 'CR-001' && N.toList({ 'A.5.1': true, 'A.5.2': false }).value.join() === 'A.5.1' && N.toList({ 0: 'a', 1: 'b' }).value.join() === 'a,b');
+    t('normalize: null / undefined → []', N.toList(null).value.length === 0 && N.toList(undefined).value.length === 0);
+    t('normalize: boolean / nested object → not ok (reported)', !N.toList(true).ok && !N.toList({ foo: { bar: 1 } }).ok);
+    const refsCases = [{ iso: ['A.8.20'], csf: 'PR.IR', cis: null, cisram: 'CR-001' }, '{"iso":["A.5.1"],"cisram":"CR-002"}', ['A.8.13', 'PR.DS', 'CIS-11', 'CR-003'], null, undefined];
+    t('normalizeRefs: object / JSON string / legacy flat list / null → four arrays', refsCases.every(v => { const r = N.refs(v); return N.REF_KEYS.every(k => Array.isArray(r[k])); }) &&
+      N.refs(refsCases[0]).cisram[0] === 'CR-001' && N.refs(refsCases[1]).cisram[0] === 'CR-002' && N.refs(refsCases[2]).cis[0] === 'CIS-11' && N.refs(refsCases[2]).iso[0] === 'A.8.13');
+    const bad = N.record('treatments', { id: 'TR-X', refs: { iso: true, cisram: 'CR-1' } });
+    t('Data Format Error reports record ID, field and received type', bad.issues.length === 1 && bad.issues[0].recordId === 'TR-X' && bad.issues[0].field === 'refs.iso' && bad.issues[0].receivedType === 'boolean' && bad.record.refs.cisram[0] === 'CR-1');
+    const raw = { id: 'TR-S', riskId: 'RS-B', strategy: 'Mitigate', status: 'Planned', refs: { iso: ['A.8.20'], csf: ['PR.IR'], cis: ['CIS-12'], cisram: 'CR-001' } };
+    let crashed = null; try { const s0 = raw.refs; ['iso', 'csf', 'cis', 'cisram'].filter(k => (s0[k] || []).length).map(k => s0[k].join(', ')); } catch (e) { crashed = e.message; }
+    t('Root cause reproduced: string refs.cisram → "join is not a function"', /join is not a function/.test(crashed || ''), crashed);
+    const dd0 = Object.assign({ assessment: W.assessment }, await W.load(RB.COLLECTIONS));
+    dd0.treatments = dd0.treatments.concat([raw]);          // raw (un-normalized) legacy record handed straight to the builder
+    let html0 = ''; try { html0 = RR.render(RB.build('combined', dd0, {})); } catch (e) { html0 = 'CRASH ' + e.message; }
+    t('Report Center builds with string refs.cisram (no crash) and shows the mapping', !html0.startsWith('CRASH') && html0.includes('CISRAM: CR-001'), html0.slice(0, 60));
+    await W.save('treatments', raw);                          // stored as-is (string) — like the Treatment form did
+    const back = await W.load(['treatments']), tr = back.treatments.find(x => x.id === 'TR-S');
+    t('workspace.load normalizes on read; storage keeps the original value', Array.isArray(tr.refs.cisram) && tr.refs.cisram[0] === 'CR-001' && (await W.repo.list('treatments')).find(x => x.id === 'TR-S').refs.cisram === 'CR-001');
+    await W.save('treatments', Object.assign({}, raw, { id: 'TR-BAD', refs: { iso: true } }));
+    await W.load(['treatments']);
+    t('Unparseable legacy value → W.formatIssues entry (no crash)', W.formatIssues.some(i => i.recordId === 'TR-BAD' && i.field === 'refs.iso' && i.receivedType === 'boolean'));
+    await W.remove('treatments', 'TR-S'); await W.remove('treatments', 'TR-BAD');
+  }
+  // ---- FAIR multi-scenario (1…N)
+  {
+    const RB = C.services.reportBuilder, RR = C.services.reportRenderer, FS = C.services.fairScenarios;
+    const mk = (i, cur, mult) => { const sm = JSON.parse(JSON.stringify(r2.summaries)); Object.keys(sm.AnnualRisk).forEach(k => sm.AnnualRisk[k] *= mult);
+      const hist = JSON.parse(JSON.stringify(r2.histogram)); hist.lo *= mult; hist.hi *= mult;
+      return { id: 'RUN-S' + i, scenarioId: 'FS-00' + i, scenarioName: 'Scenario ' + i, riskId: 'RS-' + String.fromCharCode(64 + i), currency: cur, at: '2026-09-2' + i + 'T00:00:00Z', iterations: 10000, seed: 40 + i,
+        summaries: sm, histogram: hist, exceedance: r2.exceedance.map(p => ({ x: p.x * mult, p: p.p })), inputs: [{ field: 'CF', value: { min: 1, mostLikely: 2, max: 3 }, source: i % 2 ? 'USER_INPUT' : 'CAT6_DEFAULT' }] }; };
+    const N6 = [1, 2, 3, 4, 5, 6].map(i => mk(i, 'TWD', i));
+    const scen = N6.map(r => ({ id: r.scenarioId, scenarioName: r.scenarioName, riskId: r.riskId, fields: r.inputs, currency: 'TWD' }));
+    const d6 = Object.assign({ assessment: W.assessment }, await W.load(RB.COLLECTIONS), { fairRuns: N6, fairInputs: scen });
+    const per = FS.latestPerScenario(N6, scen.map(FS.scenario));
+    t('FAIR: 6 scenarios supported (not limited to 4), sorted by expected loss', per.length === 6 && per[0].scenarioId === 'FS-006');
+    const h6 = RR.render(RB.build('fair', d6, {}));
+    const det = (h6.match(/FAIR Detailed Scenario — FS-00\d/g) || []);
+    t('FAIR report: one Detailed Scenario per scenario (6)', new Set(det).size === 6);
+    const hists = [1, 2, 3, 4, 5, 6].map(i => { const m = h6.split('FAIR Detailed Scenario — FS-00' + i)[1].split('FAIR Detailed Scenario')[0]; return (m.match(/aria-label="Annual risk distribution"[\s\S]*?<\/svg>/) || [''])[0]; });
+    t('FAIR report: each scenario draws its own distribution (6 distinct histograms)', new Set(hists).size === 6 && hists.every(x => x.length > 100));
+    t('FAIR report: per-scenario exceedance curve, percentiles, KPI, inputs', ['Loss Exceedance Curve', 'Percentiles', 'Expected Loss (Mean ALE)', 'Input Parameters'].every(k => (h6.match(new RegExp(k.replace(/[()]/g, '\\$&'), 'g')) || []).length >= 6));
+    t('FAIR report: summary + comparison chart + CAT.6 ASSUMPTION label', h6.includes('FAIR Scenario Summary') && h6.includes('各情境年化風險比較') && h6.includes('CAT.6 ASSUMPTION / SIMULATED VALUE'));
+    const dMix = Object.assign({}, d6, { fairRuns: N6.map((r, i) => Object.assign({}, r, { currency: i === 2 ? 'USD' : 'TWD' })) });
+    const hm = RR.render(RB.build('fair', dMix, {}));
+    t('FAIR report: mixed currencies → "Currency normalization required." and no comparison chart', hm.includes('Currency normalization required.') && !hm.includes('各情境年化風險比較'));
+    const leg = [{ id: 'RUN-L1', riskId: 'RS-B', at: '2026-09-01', summaries: r2.summaries }];
+    t('FAIR legacy run (no scenarioId) maps to the scenario of the same risk', FS.scenarioOf(C.util.normalize.fairRun(leg[0]), [{ id: 'fair', riskId: 'RS-B' }]) === 'fair');
+    t('FAIR scenario ids: next id is FS-007 after 6', FS.nextId(scen) === 'FS-007');
+    // Independent simulations: same inputs, different seeds → different results; same seed → identical (no shared state)
+    const inp2 = Object.assign({}, inputs, { PrimaryLoss: { min: 10, mostLikely: 20, max: 30 } });
+    const [ra, rb, ra2] = await Promise.all([C.services.fair.run(inputs, { iterations: 20000, seed: 1 }), C.services.fair.run(inp2, { iterations: 20000, seed: 2 }), C.services.fair.run(inputs, { iterations: 20000, seed: 1 })]);
+    t('FAIR: concurrent scenario runs do not share results', ra.summaries.AnnualRisk.P50 !== rb.summaries.AnnualRisk.P50 && ra.summaries.AnnualRisk.P50 === ra2.summaries.AnnualRisk.P50);
+  }
+  // ---- Dashboard View Model (shared by UI and PDF)
+  {
+    const DM = C.services.dashboardModel, dd = await W.load(DM.COLLECTIONS), vm = DM.build(dd, W.assessment, { now: '2026-09-28T07:00:00Z' });
+    const counts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }; dd.risks.forEach(r => { if (r.likelihood && r.impact) counts[C.calc.riskMatrix.assess(r.likelihood, r.impact).band.id]++; });
+    t('Dashboard VM: KPI counts equal the engines', vm.kpis.find(k => k.id === 'critical').value === counts.CRITICAL && vm.kpis.find(k => k.id === 'high').value === counts.HIGH);
+    t('Dashboard VM: meta has organization / assessment / scope / time', vm.meta.organization && vm.meta.assessmentName && vm.meta.generatedAt === '2026-09-28T07:00:00.000Z');
+    t('Dashboard VM: no secrets', !/eyJ|anonKey|service_role|access_token/.test(JSON.stringify(vm)));
+  }
   // ---- Formal report: identity, classification, Report ID / UUID, canonical SHA-256, registry, verification
   {
     const RB = C.services.reportBuilder, RR = C.services.reportRenderer, RI = C.services.reportIntegrity;

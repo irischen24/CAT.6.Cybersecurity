@@ -152,19 +152,41 @@ with sync_playwright() as p:
     pg.click('#cancel'); pg.wait_for_function("document.getElementById('run-state').textContent.includes('Cancelled')", timeout=10000)
     ok('FAIR run can be cancelled', True)
     ok('No errors during interactive flows', not errs, errs[:3])
-    # ---------- 6b. FAIR: two scenarios → report summary + detail picker ----------
+    # ---------- 6b. FAIR: multi-scenario (1…N) → independent runs → report per scenario ----------
     pg.goto(BASE + 'app/fair-analysis.html'); settle(pg)
-    other = pg.evaluate("[...document.querySelectorAll('#risk-sel option')].map(o => o.value).find(v => v !== document.getElementById('risk-sel').value)")
-    pg.select_option('#risk-sel', other); pg.wait_for_timeout(300)
-    pg.locator('input[name=iters][value="10000"]').check(force=True); pg.click('#run')
-    pg.wait_for_function("document.getElementById('run-state').textContent.includes('Completed')", timeout=60000)
+    for _ in range(2):
+        before = pg.locator('#scn-sel option').count()
+        pg.click('#scn-add'); pg.wait_for_function("document.querySelectorAll('#scn-sel option').length > %d" % before, timeout=10000); pg.wait_for_timeout(200)
+    nscn = pg.locator('#scn-sel option').count()
+    ok('FAIR: scenarios can be added (1…N)', nscn >= 3, '%d scenarios' % nscn)
+    pg.locator('input[name=iters][value="10000"]').check(force=True)
+    pg.click('#run-all'); pg.wait_for_function("document.getElementById('run-state').textContent.includes('已完成')", timeout=120000)
+    st = pg.inner_text('#run-state')
+    ok('FAIR: "Run all" simulates every scenario independently', ('已完成 %d / %d' % (nscn, nscn)) in st, st)
+    ids = pg.evaluate("[...document.querySelectorAll('#runs tbody tr')].map(r => r.cells[2].textContent.split(' ')[0])")
+    ok('FAIR: one run record per scenario, keyed by scenarioId', len(set(ids)) >= nscn, ids)
     pg.goto(BASE + 'app/reports.html?type=fair'); settle(pg)
-    ok('Report FAIR: scenario picker shown', pg.locator('#fair-pick').is_visible() and pg.locator('#fair-run option').count() >= 2)
     tbl = pg.inner_text('#preview')
-    ok('Report FAIR: summary lists both scenarios', 'FAIR 情境彙總' in tbl and other in tbl and '各情境年化風險比較' in tbl)
+    ok('Report FAIR: Scenario Summary + Comparison + one Detailed Scenario per scenario', 'FAIR Scenario Summary' in tbl and '各情境年化風險比較' in tbl and tbl.count('FAIR Detailed Scenario — ') >= nscn)
+    ok('Report FAIR: every scenario has its own distribution + exceedance chart', pg.locator('#preview svg[aria-label="Annual risk distribution"]').count() >= nscn and tbl.count('Loss Exceedance Curve') >= nscn)
+    ok('Report FAIR: CAT.6 ASSUMPTION / SIMULATED VALUE marked', 'CAT.6 ASSUMPTION / SIMULATED VALUE' in tbl)
     first = pg.evaluate("[...document.querySelectorAll('#fair-run option')].map(o => o.value).pop()")
     pg.select_option('#fair-run', first); pg.wait_for_timeout(300)
-    ok('Report FAIR: detail follows picker + URL keeps run', ('&run=' + first) in pg.url and pg.evaluate("document.getElementById('fair-run').value") == first)
+    ok('Report FAIR: run picker override + URL keeps run', ('&run=' + first) in pg.url and first in pg.inner_text('#preview'))
+    # ---------- 6c. Report Center with legacy / malformed refs (root cause of "refs[k].join is not a function") ----------
+    pg.goto(BASE + 'app/risk-treatment.html'); settle(pg)
+    pg.evaluate("""() => { const W = CAT6.services.workspace; return Promise.all([
+      W.save('treatments', { id: 'TR-LEG1', riskId: 'RS-B', strategy: 'Mitigate', control: 'legacy string cisram', status: 'Planned', dueDate: '2027-01-01', refs: { iso: 'A.8.20; A.8.14', csf: ['PR.IR'], cis: 'CIS-12', cisram: 'CR-001' } }),
+      W.save('treatments', { id: 'TR-LEG2', riskId: 'RS-B', strategy: 'Mitigate', control: 'flat legacy list', status: 'Planned', dueDate: '2027-01-01', refs: ['A.5.15', 'PR.AA', 'CIS-06', 'CR-002'] }),
+      W.save('treatments', { id: 'TR-BAD', riskId: 'RS-B', strategy: 'Mitigate', control: 'bad type', status: 'Planned', dueDate: '2027-01-01', refs: { iso: true } }) ]); }""")
+    pg.goto(BASE + 'app/reports.html?type=combined'); settle(pg)
+    body = pg.inner_text('#page')
+    ok('Report Center loads with legacy refs (no "無法載入資料")', '無法載入資料' not in body and pg.locator('#preview .c6r-sec').count() >= 15)
+    ok('Legacy refs normalized into the report (string + flat list)', 'CISRAM: CR-001' in pg.inner_text('#preview') and 'CISRAM: CR-002' in pg.inner_text('#preview'))
+    ok('Unparseable value shown as Data Format Error with Record ID / Field / Received Type', 'Data Format Error' in body and 'TR-BAD' in pg.inner_text('#fmt-issues') and 'refs.iso' in pg.inner_text('#fmt-issues') and 'boolean' in pg.inner_text('#fmt-issues'))
+    pg.goto(BASE + 'app/risk-treatment.html'); settle(pg)
+    ok('Risk Treatment page also reads normalized refs', 'CR-001' in pg.inner_text('table') and '無法載入資料' not in pg.inner_text('#page'))
+    pg.evaluate("() => { const W = CAT6.services.workspace; return Promise.all(['TR-LEG1', 'TR-LEG2', 'TR-BAD'].map(id => W.remove('treatments', id))); }")
     # ---------- 7. Reports → PDF ----------
     pg.goto(BASE + 'app/reports.html?type=combined'); settle(pg)
     ok('Report preview rendered', pg.locator('#preview .c6r-sec').count() >= 15)
@@ -198,7 +220,7 @@ with sync_playwright() as p:
     per = [re.sub(r'\s+', ' ', subprocess.run(['pdftotext', '-f', str(i), '-l', str(i), pdf, '-'], capture_output=True, text=True).stdout) for i in range(1, pages + 1)]
     ok('Formal PDF: every page after the cover has Page i of N + Report ID + classification', all(('Page %d of %d' % (i + 1, pages)) in t and rid in t and 'CONFIDENTIAL' in t for i, t in enumerate(per) if i > 0), '%d pages' % pages)
     ok('Formal PDF: cover identity block (org, ID, version, classification)', rid in per[0] and 'CONFIDENTIAL' in per[0] and 'Version' in per[0] and 'E2E Auditor' in per[0])
-    ok('Formal PDF: SHA-256 on final page equals registry', sha in per[-1] or sha in per[-2] + per[-1])
+    ok('Formal PDF: SHA-256 on final page equals registry', sha in (per[-2] + per[-1]).replace(' ', ''))   # long hash wraps inside its table cell
     ok('Formal PDF: disclaimer + copyright + visual-seal disclaimer', 'Methodology Boundary' in txt and 'All rights reserved' in txt and 'DEMO / VISUAL SEAL ONLY' in txt and 'NOT SIGNED' in txt and 'TSA NOT CONNECTED' in txt)
     import cv2, glob as _g
     qrtxt = ''
@@ -277,6 +299,7 @@ with sync_playwright() as p:
     pg.goto(BASE + 'app/dashboard.html'); settle(pg)
     w0 = main_w(pg); ok('Tablet: default narrow rail', view(pg) == 'rail')
     pg.locator('.c6-side__toggle').click(); pg.wait_for_timeout(400)
+    pg.wait_for_function("getComputedStyle(document.querySelector('.c6-scrim')).opacity === '1'", timeout=3000)   # 200 ms fade can lag under load
     ok('Tablet: expand opens overlay drawer + backdrop, content does not move', view(pg) == 'overlay' and pg.locator('.c6-scrim').evaluate("e => getComputedStyle(e).opacity") == '1' and abs(main_w(pg) - w0) < 1)
     ok('Tablet overlay: focus moved into drawer', pg.evaluate("document.activeElement.classList.contains('c6-nav__link')"))
     pg.keyboard.press('Escape'); pg.wait_for_timeout(300); ok('Tablet: Escape closes overlay, focus returns', view(pg) == 'rail' and pg.evaluate("document.activeElement.classList.contains('c6-side__toggle')"))
@@ -349,6 +372,32 @@ with sync_playwright() as p:
     ok('Trust Center unknown document → NOT FOUND', 'NOT FOUND' in pg.inner_text('#lookup'))
     ok('No errors on brand / trust pages', not errs, errs[:3])
     ctx.close()
+    # ---------- 7e. Dashboard → Export PDF (Dashboard Analysis Snapshot) ----------
+    for (w, h, tag) in [(1440, 900, 'desktop'), (360, 780, 'mobile')]:
+        ctx = b.new_context(viewport={'width': w, 'height': h}, accept_downloads=True); pg = ctx.new_page(); errs = []; watch(pg, errs)
+        pg.goto(BASE + 'app/dashboard.html'); settle(pg)
+        dom_kpis = pg.evaluate("[...document.querySelectorAll('#kpis .c6-kpi__value, #kpis [class*=kpi__value]')].map(n => n.textContent.trim())")
+        vm_kpis = pg.evaluate("CAT6.services.dashboardModel.current.kpis.filter(k => !k.empty).map(k => k.text)")
+        ok('Dashboard %s: KPI cards are drawn from the shared View Model' % tag, all(any(v in d for d in dom_kpis) for v in vm_kpis), (dom_kpis, vm_kpis))
+        btn = pg.locator('#dash-pdf')
+        ok('Dashboard %s: Export PDF button in header' % tag, btn.is_visible() and 'Export PDF' in btn.inner_text())
+        with pg.expect_download(timeout=90000) as dl: btn.click()
+        f = os.path.join(OUT, 'dashboard-%s.pdf' % tag); dl.value.save_as(f)
+        pg.wait_for_function("document.getElementById('dash-pdf-status').textContent.includes('PDF generated successfully')", timeout=10000)
+        info = subprocess.run(['pdfinfo', f], capture_output=True, text=True).stdout
+        n = int(re.search(r'Pages:\s+(\d+)', info).group(1)); size = re.search(r'Page size:\s+([\d.]+) x ([\d.]+)', info)
+        ok('Dashboard %s PDF: A4 multi-page (%d pages)' % (tag, n), n >= 3 and abs(float(size.group(1)) - 595.28) < 1)
+        raw = open(f, 'rb').read()
+        ok('Dashboard %s PDF: no keys / tokens / config' % tag, not re.search(rb'eyJ|anonKey|service_role|access_token|refresh_token|supabase', raw))
+        if tag == 'desktop':
+            subprocess.run(['pdftoppm', '-r', '72', '-png', '-f', '1', '-l', '1', f, os.path.join(OUT, 'dash-p1')])
+            svg1 = pg.evaluate("() => CAT6.services.dashboardPdf.build(CAT6.services.dashboardModel.current, { scale: 1, snapshotId: 'DASH-TEST' }).then(r => r.svgs.join(''))")
+            vm = pg.evaluate("CAT6.services.dashboardModel.current")
+            ok('Dashboard PDF uses the same View Model (KPI values, organization, Page X of Y)', all(k['text'] in svg1 for k in vm['kpis']) and vm['meta']['organization'].replace('（', '') [:4] in svg1 and 'Page 1 of' in svg1)
+            ok('Dashboard PDF contains matrix, distribution, coverage, treatment, readiness, notice', all(k in svg1 for k in ['Risk Matrix 5×5', 'Risk Distribution', 'Framework Coverage', 'Risk Treatment Summary', 'CAT.6 Readiness Indicator', 'Data Source', 'KPI Cards']))
+            ok('Dashboard PDF snapshot ID is DASH-… (not a REP- report ID)', re.search(r'DASH-\d{8}-[0-9A-Z]{5}', pg.inner_text('#dash-pdf-status')) is not None and 'REP-' not in pg.inner_text('#dash-pdf-status'))
+        ok('Dashboard %s: no errors during export' % tag, not errs, errs[:3])
+        ctx.close()
     # ---------- 8. file:// fallback ----------
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     pg = ctx.new_page(); errs = []; watch(pg, errs)
