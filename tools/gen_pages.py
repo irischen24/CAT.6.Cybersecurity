@@ -82,3 +82,4 @@ def build():
   return CORE
 if __name__=='__main__':
   build(); print('ok')
+subprocess_ok = __import__("subprocess").run(["python3", os.path.join(ROOT, "tools", "cachebust.py")])
