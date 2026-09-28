@@ -62,6 +62,11 @@
       W.meta = m[0] || null;
       return W.meta && W.meta.seeded ? null : seedDemo();
     }).then(function () { return W.repo.list('assessments'); }).then(function (list) {
+      /* Stored data from an older build (meta without assessments): re-seed the demo instead of failing. */
+      if (!list.length) return seedDemo().then(function () { return W.repo.list('assessments'); });
+      return list;
+    }).then(function (list) {
+      W.meta = W.meta || { current: list[0] && list[0].id };
       W.assessments = list;
       W.assessment = list.filter(function (a) { return a.id === W.meta.current; })[0] || list[0] || null;
       if (W.assessment && W.meta.current !== W.assessment.id) return setMeta({ current: W.assessment.id });
