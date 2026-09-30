@@ -25,7 +25,7 @@
       if (S.service) {
         h += section('2. Select Assessment', '<div class="c6-row"><label class="c6-field c6-field--inline"><span class="c6-var__lbl">目標評估</span><select class="c6-input" id="as-sel">' + (W.assessments || []).map(function (a) { return '<option value="' + esc(a.id) + '"' + (a.id === W.assessment.id ? ' selected' : '') + '>' + esc(a.id + ' · ' + a.organization + ' · ' + a.name) + '</option>'; }).join('') + '</select></label>' +
           '<label class="c6-field c6-field--inline"><span class="c6-var__lbl">資料集</span><select class="c6-input" id="ds-sel"><option value="">請選擇…</option>' + Object.keys(IC.DATASETS).filter(function (k) { return IC.DATASETS[k].service === S.service; }).map(function (k) { return '<option value="' + k + '"' + (S.ds === k ? ' selected' : '') + '>' + esc(IC.DATASETS[k].label) + '</option>'; }).join('') + '</select></label></div>' +
-          (W.assessment.id === 'AS-DEMO' ? '<p class="c6-note">目前為示範評估 AS-DEMO；匯入的資料會與示範資料並存（相同 ID 會覆寫）。正式使用建議先於 Risk Assessment 建立新評估。</p>' : ''));
+          (W.assessment.id === 'AS-DEMO' ? '<p class="c6-note">目前為預設評估 AS-DEMO（頂峰科技情境案例）；匯入的資料會與預設資料並存（相同 ID 會覆寫）。正式使用建議先於 Risk Assessment 建立新評估。</p>' : ''));
       }
       if (S.ds) {
         var ds = IC.DATASETS[S.ds];

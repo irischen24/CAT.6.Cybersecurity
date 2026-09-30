@@ -111,7 +111,7 @@
         (W.reason ? '<dt>說明</dt><dd>' + esc(W.reason) + '</dd>' : '') + (s ? '<dt>登入</dt><dd>' + esc(s.email) + '</dd>' : '') + '</dl>' +
         (W.canSignIn ? '<form class="c6-stack" id="sb-form" novalidate><label class="c6-field"><span class="c6-var__lbl">Email</span><input class="c6-input" name="email" type="email" autocomplete="username" required></label><label class="c6-field"><span class="c6-var__lbl">Password</span><input class="c6-input" name="password" type="password" autocomplete="current-password" required></label><button class="c6-btn c6-btn--primary" type="submit">登入 Supabase</button><p class="c6-note" id="sb-err" role="alert"></p></form>' : '') +
         '<div class="c6-actions">' + (s ? '<button type="button" class="c6-btn c6-btn--secondary" id="sb-out">登出 Supabase</button>' : '') +
-        '<button type="button" class="c6-btn c6-btn--secondary" id="reset">重新載入 CAT.6 示範資料</button><button type="button" class="c6-btn c6-btn--ghost" id="clear">清除本機所有資料</button></div>' +
+        '<button type="button" class="c6-btn c6-btn--secondary" id="reset">重新載入預設資料（頂峰科技情境案例）</button><button type="button" class="c6-btn c6-btn--ghost" id="clear">清除本機所有資料</button></div>' +
         '<p class="c6-note">前端只使用 Supabase 公開 anon key；service_role key 或密碼不會出現在程式碼中。設定方式見 docs/BACKEND.md。</p></div>';
       var form = document.getElementById('sb-form');
       if (form) form.addEventListener('submit', function (e) {
@@ -121,10 +121,10 @@
       });
       var out = document.getElementById('sb-out'); if (out) out.addEventListener('click', function () { REPO.signOut(); location.reload(); });
       document.getElementById('reset').addEventListener('click', function () {
-        C.ui.form.confirm('以 CAT.6 示範資料覆寫 AS-DEMO 評估？（其他評估不受影響；AS-DEMO 中的修改會遺失）', '重新載入').then(function (ok) { if (ok) W.resetDemo().then(function () { location.reload(); }); });
+        C.ui.form.confirm('以預設資料（頂峰科技情境案例）覆寫 AS-DEMO 評估？（其他評估不受影響；AS-DEMO 中的修改與模擬紀錄會遺失）', '重新載入').then(function (ok) { if (ok) W.resetDemo().then(function () { location.reload(); }); });
       });
       document.getElementById('clear').addEventListener('click', function () {
-        C.ui.form.confirm('清除此瀏覽器中所有 CAT.6 資料？下次開啟會重新載入示範資料。', '清除').then(function (ok) { if (ok) W.clearAll().then(function () { sessionStorage.removeItem('cat6:notice-ack'); location.reload(); }); });
+        C.ui.form.confirm('清除此瀏覽器中所有 CAT.6 資料？下次開啟會重新載入預設資料（頂峰科技情境案例）。', '清除').then(function (ok) { if (ok) W.clearAll().then(function () { sessionStorage.removeItem('cat6:notice-ack'); location.reload(); }); });
       });
     }
     workspace();
