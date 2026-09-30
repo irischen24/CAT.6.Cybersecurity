@@ -13,11 +13,16 @@
 | CSF 2.0 Readiness Index | 0–3；Readiness Level 五級 | 正式的_Readiness_評分方法.pdf | 否 |
 | CSF Target（未輸入時） | **3（Fully Implemented）** | Readiness Index 的完整實施點；差距即「距離完整實施」 | 是（逐項設定 Target） |
 | ISO Readiness Indicator | 九領域完成比例等權平均 | 未提供 ISO 專用方法，採最透明的方式；非 ISO 官方評分 | 否 |
-| FAIR 三點估計 | Scenario B（CF、PoA、Susceptibility、PL、SL） | FAIR筆記-20260926-Iris.md 與其 Python 程式 | 是（FAIR 頁 / 匯入） |
+| FAIR 三點估計 | 頂峰科技 RS-A～RS-D 四情境（RS-B 同 FAIR 筆記 Scenario B） | CAT6_FAIR_RS-A_to_RS-D_Filled.xlsx（Assumptions 工作表說明推估理由） | 是（FAIR 頁 / 匯入） |
 | FAIR 模擬 | 1,000,000 次、seed 20260926 | FAIR 筆記 | 是 |
 | 幣別 | TWD | FAIR 筆記金額皆為 NT$ | 是 |
-| 示範資料集 | CAT.6 示範組織（風險、處理、CIS、CSF、ISO、證據等） | 展示完整流程；以 FAIR 筆記 Scenario B 為核心；不代表任何組織 | 是（編輯或匯入即改為組織資料） |
+| 預設資料集 | **頂峰科技情境案例**：風險 RS-A～RS-D、處理計畫、NIST SP 800-30、CIS RAM、CIS Controls（含 18 項 Safeguard）、CSF 2.0、ISO 條款／SoA／證據／稽核發現／矯正措施、FAIR 四情境 | 專案提供之 11 份頂峰科技填寫附件（2026-09-28）；題目未提供之期限、狀態、殘餘風險、FAIR 頻率 / 機率 / 金額為 CAT.6 模擬推估 | 是（編輯或匯入即改為組織資料） |
 
 ## 如何「未輸入取預設值」
 - 參數類（門檻、目標 IG、CSF Target、幣別）：留白即自動採用預設值，填入後改用組織值。
 - 資料集類：Risk Assessment → 「以預設值補齊未輸入資料」，或建立新評估時勾選「未輸入的資料集先帶入 CAT.6 預設值」。只補**完全沒有資料**的資料集，已有組織資料的資料集不會被覆蓋；帶入的紀錄一經編輯即改為 USER_INPUT。
+
+## 預設資料版本與升級
+- 版本 `2026.09.28-tingfeng`（`data/defaults/meta.js`）。
+- 已開過舊版網站的瀏覽器：若預設評估 AS-DEMO **完全未被修改**（所有紀錄仍為 CAT6_DEFAULT），開啟時自動換成頂峰科技資料；若曾修改或匯入，**不會覆寫**，可在 Risk Assessment →「重新載入預設資料」手動套用。
+- 未由附件提供而未建立的資料：歷史季度快照（趨勢圖）、管理審查紀錄、Roadmap 手動任務狀態。稽核紀錄 AUD-2026-01 為附件 Findings 所引用之稽核（日期採證據日期 2026-09-28，稽核員未提供）。
