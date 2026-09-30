@@ -27,28 +27,49 @@
     out.cisControls = D.cisControls.map(def);
     out.csf = D.csf.map(def);
     out.isoContext = [def(iso.context)];
-    out.isoClauses = C.data.iso.clauses.map(function (c) { return def({ id: c.id, status: iso.clauses[c.id] || 'NOT_ASSESSED', gapNote: '', owner: '', dueDate: '' }); });
-    out.isoSoa = iso.soa.map(function (s) { return def({ id: s[0], applicable: s[1], status: s[2], justification: s[3] || (s[1] ? '示範：對應已識別風險' : ''), linkedRisks: [] }); });
+    out.cisSafeguards = (D.cisSafeguards || []).map(def);
+    out.isoClauses = C.data.iso.clauses.map(function (c) { var g = iso.clauses[c.id] || {}; if (typeof g === 'string') g = { status: g };
+      return def({ id: c.id, status: g.status || 'NOT_ASSESSED', gapNote: g.gapNote || '', owner: g.owner || '', dueDate: g.dueDate || '' }); });
+    out.isoSoa = iso.soa.map(function (s) { return def(Array.isArray(s) ? { id: s[0], applicable: s[1], status: s[2], justification: s[3] || '', linkedRisks: [] } : Object.assign({ linkedRisks: [] }, s)); });
     out.isoTasks = Object.keys(iso.tasks).map(function (k) { return def({ id: k, status: iso.tasks[k] }); });
     out.audits = iso.audits.map(def); out.findings = iso.findings.map(def); out.capas = iso.capas.map(def);
     out.reviews = iso.reviews.map(def); out.evidence = iso.evidence.map(def);
-    out.fairInputs = [def({ id: 'fair', riskId: 'RS-B', fields: C.data.fairDefaults.fields.map(function (f) { return { field: f.field, value: Object.assign({}, f.value), source: 'CAT6_DEFAULT' }; }) })];
+    var FD = C.data.fairDefaults;
+    out.fairInputs = (FD.scenarios && FD.scenarios.length ? FD.scenarios : [{ scenarioId: 'fair', riskId: FD.scenario.id, scenarioName: FD.scenario.name, values: null }]).map(function (sc) {
+      return def({ id: sc.scenarioId, scenarioId: sc.scenarioId, scenarioName: sc.scenarioName, riskId: sc.riskId, currency: FD.currency || 'TWD', assumptionNote: sc.reason || '',
+        fields: FD.fields.map(function (f) { return { field: f.field, value: Object.assign({}, sc.values ? sc.values[f.field] : f.value), source: 'CAT6_DEFAULT' }; }) });
+    });
     out.snapshots = D.workspace.snapshots.map(def);
-    out.activity = [def({ id: 'AC-0001', at: new Date().toISOString(), who: 'CAT.6', what: '載入 CAT.6 示範資料集（所有數值標示 CAT6_DEFAULT）' })];
+    out.activity = [def({ id: 'AC-0001', at: new Date().toISOString(), who: 'CAT.6', what: '載入預設資料集：' + (D._meta.organization || 'CAT.6') + ' 情境案例（版本 ' + D._meta.version + '，所有數值標示 CAT6_DEFAULT）' })];
     return out;
   }
 
   function seedDemo() {
     var a = Object.assign({}, C.data.defaults.workspace.assessment, { updatedAt: new Date().toISOString() });
     var recs = demoRecords(a.id), jobs = [W.repo.upsert('assessments', a)];
+    recs.fairRuns = [];   /* simulation results belong to the previous inputs — the default assessment starts without runs */
     Object.keys(recs).forEach(function (col) {
       jobs.push(W.repo.list(col).then(function (existing) {
         return W.repo.replaceAll(col, existing.filter(function (r) { return r.assessmentId !== a.id; }).concat(recs[col]));
       }));
     });
-    return Promise.all(jobs).then(function () { return setMeta({ seeded: true, current: a.id }); });
+    return Promise.all(jobs).then(function () { return setMeta({ seeded: true, current: a.id, defaultsVersion: C.data.defaults._meta.version }); });
   }
 
+  /* When the default dataset changes (e.g. demo organization → 頂峰科技), refresh the default assessment AS-DEMO —
+   * but only if the user has not touched it (every record still CAT6_DEFAULT). Edited data is never overwritten;
+   * in that case the new defaults are available through Risk Assessment → 重設預設資料. */
+  function upgradeDefaults() {
+    var v = C.data.defaults._meta.version, id = C.data.defaults.workspace.assessment.id;
+    if (W.meta.defaultsVersion === v) return null;
+    var cols = Object.keys(demoRecords(id)).filter(function (c) { return c !== 'activity' && c !== 'snapshots'; });
+    return Promise.all(cols.map(function (c) { return W.repo.list(c); }).concat([W.repo.list('assessments')])).then(function (lists) {
+      var as = lists.pop().filter(function (a) { return a.id === id; })[0];
+      var touched = (as && as.source !== 'CAT6_DEFAULT') || lists.some(function (l) { return l.some(function (r) { return r.assessmentId === id && r.source && r.source !== 'CAT6_DEFAULT' && r.source !== 'CALCULATED'; }); });
+      if (touched) return setMeta({ defaultsVersion: v, defaultsUpgradeSkipped: true });
+      return seedDemo();
+    });
+  }
   function setMeta(patch) {
     W.meta = Object.assign({}, W.meta || { id: 'meta' }, patch, { id: 'meta' });
     return W.repo.upsert(META, W.meta);
@@ -60,7 +81,8 @@
     W.repo = r.repo; W.mode = r.mode === 'supabase' ? 'supabase' : r.repo.kind; W.reason = r.reason; W.canSignIn = !!r.canSignIn;
     W._ready = W.repo.list(META).then(function (m) {
       W.meta = m[0] || null;
-      return W.meta && W.meta.seeded ? null : seedDemo();
+      if (!W.meta || !W.meta.seeded) return seedDemo();
+      return upgradeDefaults();
     }).then(function () { return W.repo.list('assessments'); }).then(function (list) {
       /* Stored data from an older build (meta without assessments): re-seed the demo instead of failing. */
       if (!list.length) return seedDemo().then(function () { return W.repo.list('assessments'); });
@@ -142,7 +164,7 @@
   function fillDefaults() {
     var recs = demoRecords(W.assessment.id), cols = Object.keys(recs).filter(function (c) { return c !== 'activity' && c !== 'snapshots'; });
     return load(cols).then(function (d) {
-      var todo = cols.filter(function (c) { return !(d[c] || []).length; });
+      var todo = cols.filter(function (c) { return !(d[c] || []).length && recs[c].length; });
       return Promise.all(todo.map(function (c) { return W.repo.upsertMany(c, recs[c]); })).then(function () {
         return log(todo.length ? '以 CAT.6 預設值補齊未輸入的資料集：' + todo.join(', ') : '所有資料集皆已有資料，未帶入預設值', 'CAT6_DEFAULT');
       }).then(function () { return todo; });
