@@ -1,9 +1,25 @@
-/* Demo Current / Target profile on the CSF 2.0 Readiness Index (0–3). */
+/* NIST CSF 2.0 Current / Target profile (Readiness Index 0–3) — 頂峰科技 case (CAT6_NIST_CSF_Filled.xlsx). */
 CAT6.data.defaults.csf = [
-  ['GV.OC', 2, 3], ['GV.RM', 1, 3], ['GV.RR', 2, 3], ['GV.PO', 2, 3], ['GV.OV', 1, 3], ['GV.SC', 0, 2],
-  ['ID.AM', 2, 3], ['ID.RA', 1, 3], ['ID.IM', 1, 2],
-  ['PR.AA', 2, 3], ['PR.AT', 1, 3], ['PR.DS', 2, 3], ['PR.PS', 2, 3], ['PR.IR', 1, 3],
-  ['DE.CM', 1, 3], ['DE.AE', 1, 2],
-  ['RS.MA', 1, 3], ['RS.AN', 1, 2], ['RS.CO', 1, 2], ['RS.MI', 1, 2],
-  ['RC.RP', 1, 3], ['RC.CO', 0, 2]
-].map(function (r) { return { id: r[0], current: r[1], target: r[2], action: r[1] < r[2] ? '示範改善行動：提升至目標層級' : '', owner: '', dueDate: '' }; });
+  {"id": "GV.OC", "current": 1, "target": 3, "action": "建立組織情境、關鍵服務與外部依賴清單，納入電力與勞資風險。", "owner": "Executive/Risk", "dueDate": "2026-11-30"},
+  {"id": "GV.RM", "current": 1, "target": 3, "action": "制定一致的資安風險準則、風險胃納與升級門檻。", "owner": "CISO/Risk", "dueDate": "2026-10-31"},
+  {"id": "GV.RR", "current": 1, "target": 3, "action": "明確定義高層、IT、研發、HR、BCM 的資安與復原責任。", "owner": "Executive/HR", "dueDate": "2026-10-31"},
+  {"id": "GV.PO", "current": 1, "target": 3, "action": "補齊備份、存取控制、事件應變與營運持續政策。", "owner": "CISO", "dueDate": "2026-11-15"},
+  {"id": "GV.OV", "current": 1, "target": 3, "action": "建立風險與控制成效的定期管理審查。", "owner": "Executive/Risk", "dueDate": "2026-12-15"},
+  {"id": "GV.SC", "current": 1, "target": 2, "action": "盤點電力、雲端/供應商等供應鏈依賴並建立韌性要求。", "owner": "Procurement/Risk", "dueDate": "2026-12-31"},
+  {"id": "ID.AM", "current": 1, "target": 3, "action": "建立資產、資料與關鍵服務盤點，標示研發與 CRM 關鍵度。", "owner": "IT/R&D", "dueDate": "2026-10-31"},
+  {"id": "ID.RA", "current": 1, "target": 3, "action": "以 NIST SP 800-30/CIS RAM 建立情境式風險評估與風險登錄。", "owner": "CISO/Risk", "dueDate": "2026-10-31"},
+  {"id": "ID.IM", "current": 1, "target": 3, "action": "建立改善追蹤、KPI 與風險處理閉環。", "owner": "Risk/PMO", "dueDate": "2026-11-30"},
+  {"id": "PR.AA", "current": 1, "target": 3, "action": "強化帳號、MFA、特權存取與故障期間的身分驗證。", "owner": "IAM/IT Security", "dueDate": "2026-10-31"},
+  {"id": "PR.AT", "current": 1, "target": 3, "action": "建立資安意識、備份責任與事件通報訓練。", "owner": "HR/CISO", "dueDate": "2026-11-30"},
+  {"id": "PR.DS", "current": 0, "target": 3, "action": "導入資料分類、3-2-1 備份、加密與復原測試。", "owner": "IT/R&D", "dueDate": "2026-10-15"},
+  {"id": "PR.PS", "current": 1, "target": 3, "action": "建立安全組態、修補與網路設備高可用標準。", "owner": "IT Security", "dueDate": "2026-11-15"},
+  {"id": "PR.IR", "current": 1, "target": 3, "action": "強化 UPS/備援電力、網路 HA、BCP/DR 與關鍵人力替代。", "owner": "IT/Facilities/BCM", "dueDate": "2026-11-30"},
+  {"id": "DE.CM", "current": 1, "target": 3, "action": "集中日誌、SIEM/NDR 與邊界異常監控。", "owner": "SOC/IT Security", "dueDate": "2026-11-15"},
+  {"id": "DE.AE", "current": 1, "target": 3, "action": "建立事件分析、關聯與告警分級機制。", "owner": "SOC", "dueDate": "2026-11-30"},
+  {"id": "RS.MA", "current": 1, "target": 3, "action": "建立事件分級、指揮、通報與跨部門協調流程。", "owner": "CISO/BCM", "dueDate": "2026-10-31"},
+  {"id": "RS.AN", "current": 1, "target": 3, "action": "建立鑑識、根因分析與攻擊路徑分析程序。", "owner": "SOC/IR", "dueDate": "2026-11-30"},
+  {"id": "RS.CO", "current": 1, "target": 3, "action": "建立客戶、主管機關、員工與媒體溝通計畫。", "owner": "Legal/PR/CISO", "dueDate": "2026-11-30"},
+  {"id": "RS.MI", "current": 1, "target": 3, "action": "建立隔離、封鎖、帳號停用與復原優先序。", "owner": "IR/IT", "dueDate": "2026-10-31"},
+  {"id": "RC.RP", "current": 1, "target": 3, "action": "建立資料/系統復原計畫與定期演練。", "owner": "BCM/IT", "dueDate": "2026-11-30"},
+  {"id": "RC.CO", "current": 1, "target": 3, "action": "建立復原期間對客戶、員工與利害關係人的溝通機制。", "owner": "PR/BCM", "dueDate": "2026-11-30"}
+];

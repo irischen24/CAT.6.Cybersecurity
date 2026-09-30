@@ -1,9 +1,7 @@
-/* Demo NIST SP 800-30 assessments. Levels use VL/L/M/H/VH; G-5 and I-2 results are CALCULATED, not stored. */
+/* NIST SP 800-30 assessments — 頂峰科技 case (CAT6_NIST_SP80030_Filled.xlsx). Levels VL/L/M/H/VH; G-5 and the 5×5 risk are CALCULATED, not stored. */
 CAT6.data.defaults.nist = [
-  { id: 'NA-001', riskId: 'RS-B', sourceType: 'ADV', threatSource: '外部攻擊者（組織化犯罪）', threatEvent: '利用 Firewall 重啟空窗滲透並外洩客戶資料',
-    vulnerability: 'Firewall 重啟期間無替代過濾', vulnSeverity: 'H', predisposing: 'UPS 電力事件導致網路設備頻繁重啟', controls: 'SIEM 告警（部分覆蓋）', initiation: 'H', adverseImpact: 'H', impact: 'H' },
-  { id: 'NA-002', riskId: 'RS-D2', sourceType: 'NONADV', threatSource: '電力供應異常（結構性失效）', threatEvent: 'UPS 失效造成主機斷電',
-    vulnerability: 'UPS 電池老化', vulnSeverity: 'M', predisposing: '機房僅單一供電迴路', controls: 'UPS 年度檢查', initiation: 'M', adverseImpact: 'H', impact: 'M' },
-  { id: 'NA-003', riskId: 'RS-D5', sourceType: 'NONADV', threatSource: '內部人員誤操作', threatEvent: '誤刪共用資料夾',
-    vulnerability: '共用資料夾權限過寬', vulnSeverity: 'L', predisposing: '多部門共用同一資料夾', controls: '每日備份', initiation: 'M', adverseImpact: 'L', impact: 'L' }
+  {"id": "NIST-A", "riskId": "RS-A", "sourceType": "NONADV", "threatSource": "區域電網/公用電力故障", "threatEvent": "區域電網超載造成無預警停電", "vulnerability": "缺乏備援電力與營運持續韌性", "vulnSeverity": "H", "predisposing": "高溫午後電力需求高；總部高度依賴單一區域電網", "controls": "伺服器可重啟，但未見 UPS/發電機/雙路供電證據", "initiation": "H", "adverseImpact": "H", "impact": "H"},
+  {"id": "NIST-B", "riskId": "RS-B", "sourceType": "ADV", "threatSource": "外部駭客集團", "threatEvent": "趁防火牆重啟盲區繞過安全憑證入侵 CRM、外洩資料並勒索", "vulnerability": "網路邊界故障切換、身分驗證與監控韌性不足", "vulnSeverity": "VH", "predisposing": "全公司因停電混亂，攻擊者已在網路邊緣等待機會", "controls": "防火牆與安全憑證已部署，但重啟期間形成盲區", "initiation": "VH", "adverseImpact": "VH", "impact": "VH"},
+  {"id": "NIST-C", "riskId": "RS-C", "sourceType": "NONADV", "threatSource": "電力中斷/硬碟故障", "threatEvent": "寫入期間斷電造成硬碟實體損壞與核心研發資料遺失", "vulnerability": "未建立定期、自動、異地與可驗證的備份", "vulnSeverity": "VH", "predisposing": "關鍵製程參數與原始碼長期僅存本機", "controls": "未見有效資料復原控制", "initiation": "H", "adverseImpact": "VH", "impact": "VH"},
+  {"id": "NIST-D", "riskId": "RS-D", "sourceType": "NONADV", "threatSource": "內部人員/勞資事件", "threatEvent": "員工罷工導致機房、產線及災後復原工作中斷", "vulnerability": "關鍵人力集中、工作分配不均、缺乏替代人力與危機溝通", "vulnSeverity": "H", "predisposing": "長期超時與分配不公已累積，災後又要求無限制加班", "controls": "既有人事管理機制，但未見危機人力/BCP替代措施", "initiation": "H", "adverseImpact": "VH", "impact": "VH"}
 ];

@@ -14,10 +14,10 @@
     { key: 'csfScale', label: 'CSF 2.0 Readiness Index', value: '0 Not · 1 Partially · 2 Largely · 3 Fully Implemented；Readiness % → Initial / Developing / Defined / Managed / Optimized', basis: '專案提供之 CSF 2.0 Readiness Index（平台自訂 Index，非 NIST 官方公式）；Tier 1–4 僅作治理成熟度描述，不作為分數。', doc: '正式的_Readiness_評分方法.pdf', editable: false },
     { key: 'csfDefaultTarget', label: 'CSF Target Profile（未輸入時）', value: 3, unit: '0–3', basis: 'Readiness Index 的完整實施點（3 = Fully Implemented）；未設定 Target 的 Category 以 3 計算差距，使差距代表「距離完整實施」。組織設定 Target 後即以組織值為準。', doc: '正式的_Readiness_評分方法.pdf', editable: false },
     { key: 'isoReadiness', label: 'ISO/IEC 27001 Readiness Indicator', value: '九個領域完成比例之等權平均（無資料之領域不計入）', basis: '專案未提供 ISO 27001 專用之正式評分方法（提供之 Readiness 文件為 CSF 2.0 Index），因此採最透明的等權完成比例；非 ISO 官方評分、不預測驗證結果。', doc: 'CAT.6 平台方法', editable: false },
-    { key: 'fairInputs', label: 'FAIR 三點估計（CF、PoA、Susceptibility、PL、SL）', value: 'Scenario B 資料外洩', basis: 'FAIR筆記-20260926-Iris.md 之 Scenario B 與其 Python 程式設定（不一致處見 METHODOLOGY-NOTES）。', doc: 'FAIR筆記-20260926-Iris.md', editable: true },
+    { key: 'fairInputs', label: 'FAIR 三點估計（CF、PoA、Susceptibility、PL、SL）', value: '頂峰科技 RS-A～RS-D 四個情境', basis: '專案提供之頂峰科技 FAIR 填寫附件；題目未提供之頻率、機率與金額為 CAT.6 模擬推估（附件 Assumptions 工作表）。RS-B 數值同 FAIR 筆記 Scenario B。', doc: 'CAT6_FAIR_RS-A_to_RS-D_Filled.xlsx；FAIR筆記-20260926-Iris.md', editable: true },
     { key: 'fairSimulation', label: 'FAIR 模擬次數 / Seed', value: '1,000,000 次 · seed 20260926', basis: 'FAIR 筆記之蒙地卡羅設定；相同 seed 可重現。', doc: 'FAIR筆記-20260926-Iris.md', editable: true },
     { key: 'currency', assessmentKey: 'currency', label: '幣別', value: 'TWD', basis: 'FAIR 筆記所有金額以新台幣（NT$）表示。', doc: 'FAIR筆記-20260926-Iris.md', editable: true },
-    { key: 'demoDataset', label: '示範資料集（風險、處理、ISO、證據等）', value: 'CAT.6 示範組織', basis: '未匯入組織資料時，用於展示完整流程的示範情境（以 FAIR 筆記 Scenario B 為核心）；每筆標示 CAT6_DEFAULT，不代表任何組織實際狀況。', doc: 'CAT.6 示範資料', editable: false }
+    { key: 'demoDataset', label: '預設資料集（風險、處理、NIST、CIS、CSF、ISO、證據、FAIR）', value: '頂峰科技情境案例（RS-A～RS-D）', basis: '專案提供之頂峰科技 11 份填寫附件；每筆標示 CAT6_DEFAULT。題目未提供之期限、狀態、殘餘風險與 FAIR 數值為 CAT.6 模擬推估，不代表頂峰科技真實資料。', doc: '頂峰科技填寫附件（2026-09-28）', editable: false }
   ];
   function def(key) { return P.filter(function (p) { return p.key === key; })[0]; }
   /* → { value, source: 'USER_INPUT' | 'CAT6_DEFAULT', basis, label } */
