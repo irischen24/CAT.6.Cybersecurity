@@ -154,7 +154,12 @@ t('Import: missing required column blocks import', miss.valid.length === 0 && mi
   await W.init();
   t('Workspace mode (node) = memory', W.mode === 'memory');
   const d = await W.load(C.services.reportBuilder.COLLECTIONS);
-  t('Demo data seeded and marked CAT6_DEFAULT', d.risks.length >= 6 && d.risks.every(r => r.source === 'CAT6_DEFAULT'));
+  t('Default data = 頂峰科技 case, marked CAT6_DEFAULT', W.assessment.organization === '頂峰科技' && d.risks.map(r => r.id).join() === 'RS-A,RS-B,RS-C,RS-D' && d.risks.every(r => r.source === 'CAT6_DEFAULT'));
+  t('頂峰科技 defaults: attachment values seeded (spot checks)', d.risks.find(r => r.id === 'RS-B').likelihood === 5 && d.treatments.length === 4 && d.nist.length === 4 && d.cisram.find(r => r.id === 'RAM-C').inherentImpact === 5 &&
+    d.cisControls.find(c => c.id === 'CIS-11').ig1 === 'NOT_IMPLEMENTED' && d.cisSafeguards.length === 18 && d.csf.find(c => c.id === 'PR.DS').current === 0 && d.csf.length === 22 &&
+    d.isoClauses.find(c => c.id === '6.1.3').status === 'NOT_IMPLEMENTED' && d.isoSoa.length === 16 && d.evidence.length === 6 && d.findings.length === 4 && d.capas.length === 4);
+  t('頂峰科技 FAIR defaults: 4 scenarios RS-A…RS-D with attachment values', d.fairInputs.length === 4 && d.fairInputs.map(s => s.riskId).join() === 'RS-A,RS-B,RS-C,RS-D' &&
+    d.fairInputs.find(s => s.riskId === 'RS-D').fields.find(f => f.field === 'CF').value.mostLikely === 1 && d.fairInputs.every(s => s.fields.every(f => f.source === 'CAT6_DEFAULT')));
   t('usesDefaults detects demo', W.usesDefaults({ risks: d.risks }) === true);
   await W.save('risks', Object.assign({}, d.risks[0], { owner: 'X' }));
   const d2 = await W.load(['risks']);
@@ -209,7 +214,7 @@ t('Reports list defaults with basis', RR.render(RB.build('combined', data, {})).
     t('FAIR summary: one row per scenario, latest run each, sorted by ALE', per.length === 2 && per[0].id === 'RUN-B1' && per[1].id === 'RUN-A2');
     const rep = RB.build('fair', dd, {}), h = RR.render(rep);
     t('FAIR report lists every scenario with Mean/P50/P90/P95 + comparison chart', h.includes('FAIR 情境彙總') && h.includes('RUN-B1') && h.includes('RUN-A2') && !h.includes('RUN-A1') && h.includes('各情境年化風險比較') && h.includes('P95'));
-    t('FAIR: every scenario has its own Detailed Scenario section (legacy runs matched to the scenario of their risk)', h.includes('FAIR Detailed Scenario — LEGACY-RS-A') && h.includes('FAIR Detailed Scenario — fair'));
+    t('FAIR: every scenario has its own Detailed Scenario section (legacy runs matched to the scenario of their risk)', h.includes('FAIR Detailed Scenario — FS-001') && h.includes('FAIR Detailed Scenario — FS-002'));
     const rep2 = RB.build('fair', dd, { fairRunId: 'RUN-B1' });
     const rep3 = RB.build('fair', dd, { fairRunId: 'RUN-A1' }), h3 = RR.render(rep3);
     t('FAIR picker overrides the run used for that scenario only', h3.includes('RUN-A1') && !h3.includes('RUN-A2') && h3.includes('RUN-B1'));

@@ -272,7 +272,7 @@ with sync_playwright() as p:
     d.locator('[name=organization]').fill('E2E 公司'); d.locator('[name=name]').fill('E2E 新評估'); d.locator('[name=scope]').fill('全公司'); d.locator('[name=assessor]').fill('QA')
     d.locator('button[type=submit]').click(); pg.wait_for_function("(document.getElementById('c6-ctx') || {}).textContent && document.getElementById('c6-ctx').textContent.includes('E2E 公司')", timeout=15000); settle(pg)
     pg.goto(BASE + 'app/risk-register.html'); settle(pg)
-    ok('New assessment: missing datasets filled with CAT6_DEFAULT', pg.locator('table tbody tr').count() >= 6 and 'E2E 公司' in pg.inner_text('header'))
+    ok('New assessment: missing datasets filled with CAT6_DEFAULT', pg.locator('table tbody tr').count() >= 4 and 'E2E 公司' in pg.inner_text('header'))
     pg.goto(BASE + 'app/cis-ram.html'); settle(pg); ok('New assessment keeps demo assessment intact (IDs scoped per assessment)', pg.locator('table tbody tr').count() >= 3)
     ok('No errors in methodology flows', not errs, errs[:3])
     ctx.close()
@@ -398,6 +398,22 @@ with sync_playwright() as p:
             ok('Dashboard PDF snapshot ID is DASH-… (not a REP- report ID)', re.search(r'DASH-\d{8}-[0-9A-Z]{5}', pg.inner_text('#dash-pdf-status')) is not None and 'REP-' not in pg.inner_text('#dash-pdf-status'))
         ok('Dashboard %s: no errors during export' % tag, not errs, errs[:3])
         ctx.close()
+    # ---------- 7f. default dataset upgrade (old demo → 頂峰科技) ----------
+    ctx = b.new_context(viewport={'width': 1440, 'height': 900}); pg = ctx.new_page(); errs = []; watch(pg, errs)
+    pg.goto(BASE + 'app/dashboard.html'); settle(pg)
+    ok('Defaults: dashboard shows 頂峰科技 assessment', '頂峰科技' in pg.inner_text('#c6-ctx'))
+    pg.evaluate("""() => { const p = 'cat6:v2:'; const m = JSON.parse(localStorage.getItem(p + '__meta')); m[0].defaultsVersion = '2026.09.27';
+      localStorage.setItem(p + '__meta', JSON.stringify(m)); const a = JSON.parse(localStorage.getItem(p + 'assessments')); a.forEach(x => { if (x.id === 'AS-DEMO') x.organization = 'OLD DEMO ORG'; });
+      localStorage.setItem(p + 'assessments', JSON.stringify(a)); }""")
+    pg.reload(); settle(pg)
+    ok('Defaults upgrade: untouched old default assessment is refreshed to 頂峰科技', '頂峰科技' in pg.inner_text('#c6-ctx'))
+    pg.evaluate("""() => { const p = 'cat6:v2:'; const m = JSON.parse(localStorage.getItem(p + '__meta')); m[0].defaultsVersion = '2026.09.27'; localStorage.setItem(p + '__meta', JSON.stringify(m));
+      const r = JSON.parse(localStorage.getItem(p + 'risks')); r[0].source = 'USER_INPUT'; r[0].owner = 'EDITED BY USER'; localStorage.setItem(p + 'risks', JSON.stringify(r)); }""")
+    pg.reload(); settle(pg)
+    kept = pg.evaluate("JSON.parse(localStorage.getItem('cat6:v2:risks')).some(r => r.owner === 'EDITED BY USER')")
+    ok('Defaults upgrade: user-edited data is never overwritten', kept)
+    ok('No errors during defaults upgrade', not errs, errs[:3])
+    ctx.close()
     # ---------- 8. file:// fallback ----------
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     pg = ctx.new_page(); errs = []; watch(pg, errs)
